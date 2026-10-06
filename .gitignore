@@ -4,6 +4,7 @@ obj/
 [Dd]ebug/
 [Rr]elease/
 artifacts/
+TestResults/
 
 ## Visual Studio / Rider / VS Code
 .vs/
