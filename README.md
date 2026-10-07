@@ -5,8 +5,6 @@ Slouží jako výchozí bod pro navazující lekce o kontejnerizaci.
 
 ## Struktura repozitáře
 
-Sasa text
-
 ```text
 UAI.ZeroVP.sln                 solution – zůstává v kořeni
 src/                           zdrojový kód aplikace
