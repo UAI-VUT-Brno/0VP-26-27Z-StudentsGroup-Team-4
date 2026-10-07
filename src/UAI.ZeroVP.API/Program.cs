@@ -1,9 +1,16 @@
 ﻿using System.Text.Json.Serialization;
 using Microsoft.OpenApi;
+using UAI.ZeroVP.API.Logging;
 using UAI.ZeroVP.Data.DependencyInjection;
 using UAI.ZeroVP.Data.InMemory;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// --- Logování -------------------------------------------------------------
+
+// Persistentní log do souboru (JSON Lines), logování požadavků a životního cyklu.
+// Nastavení je v sekcích FileLogging a RequestLogging; popis v docs/logging.md.
+builder.AddApplicationLogging();
 
 // --- Služby ---------------------------------------------------------------
 
@@ -58,6 +65,10 @@ var swaggerEnabled = app.Configuration.GetValue("Swagger:Enabled", app.Environme
 // Bez přesměrování na HTTPS: v kontejneru se vystavuje pouze HTTP port
 // a TLS řeší až reverzní proxy před ním.
 app.UseExceptionHandler();
+
+// Za UseExceptionHandler: vidí neošetřené výjimky dřív, než se změní na odpověď 500.
+app.UseRequestLogging();
+
 app.UseStatusCodePages();
 
 if (swaggerEnabled)
@@ -82,4 +93,27 @@ app.MapControllers();
 app.MapGet("/", () => Results.Redirect(swaggerEnabled ? "/swagger" : "/api/todos"))
    .ExcludeFromDescription();
 
-app.Run();
+// --- Spuštění a zastavení -------------------------------------------------
+
+// Místo app.Run() se start a stop řídí ručně, aby se zalogovala i chyba při startu
+// (např. obsazený port) a aby se před koncem procesu vyprázdnila fronta souborového logu.
+var lifecycle = app.Services.GetRequiredService<ApplicationLifecycleLogger>();
+lifecycle.LogStarting();
+
+var exitCode = 0;
+
+try
+{
+    await app.StartAsync();
+    await app.WaitForShutdownAsync(); // vrátí se po Ctrl+C / SIGTERM a po zastavení hostitele
+}
+catch (Exception exception)
+{
+    lifecycle.LogFailed(exception);
+    exitCode = 1;
+}
+
+// Dispose zavře poskytovatele logu, který zapíše zbytek fronty (včetně ApplicationStopped).
+await app.DisposeAsync();
+
+return exitCode;

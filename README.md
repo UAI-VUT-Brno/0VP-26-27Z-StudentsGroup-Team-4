@@ -74,6 +74,12 @@ API naslouchá na `http://localhost:5258`. Kořen `/` přesměruje na Swagger UI
 Chybové odpovědi mají jednotný tvar `ProblemDetails` (RFC 9457).
 Připravené požadavky k odzkoušení jsou v souboru `src/UAI.ZeroVP.API/UAI.ZeroVP.API.http`.
 
+## Logování
+
+Aplikace zapisuje do trvalého logu start a zastavení, každý HTTP požadavek a chyby – vždy s časem,
+identifikací události, výsledkem a případným popisem chyby. Záznamy jsou JSON Lines v denních souborech
+`logs/zerovp-yyyyMMdd.log`. Podrobnosti, katalog událostí a příklady jsou v [docs/logging.md](docs/logging.md).
+
 ## Swagger
 
 Dokument OpenAPI generuje vestavěná knihovna .NET 10 (`Microsoft.AspNetCore.OpenApi`)
