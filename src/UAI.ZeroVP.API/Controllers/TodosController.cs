@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using UAI.ZeroVP.API.Logging;
 using UAI.ZeroVP.API.Mapping;
 using UAI.ZeroVP.Data.Abstractions;
 using UAI.ZeroVP.DTO;
@@ -68,7 +69,7 @@ public sealed class TodosController : ControllerBase
         var entity = request.ToEntity(_timeProvider.GetUtcNow());
         var created = await _repository.AddAsync(entity, cancellationToken);
 
-        _logger.LogInformation("Vytvořen úkol {TodoId} ({Title}).", created.Id, created.Title);
+        _logger.LogInformation(LogEvents.TodoCreated, "Vytvořen úkol {TodoId} ({Title}).", created.Id, created.Title);
 
         return CreatedAtRoute(nameof(GetById), new { id = created.Id }, created.ToDto());
     }
@@ -133,7 +134,7 @@ public sealed class TodosController : ControllerBase
             return NotFoundTodo(id);
         }
 
-        _logger.LogInformation("Smazán úkol {TodoId}.", id);
+        _logger.LogInformation(LogEvents.TodoDeleted, "Smazán úkol {TodoId}.", id);
 
         return NoContent();
     }
