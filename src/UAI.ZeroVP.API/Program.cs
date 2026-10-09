@@ -21,6 +21,13 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
+// Generátor OpenAPI nečte nastavení kontrolerů výše, ale vlastní JSON nastavení
+// (ConfigureHttpJsonOptions). Bez tohoto řádku by Swagger popisoval priority jako čísla.
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
 // Jednotné chybové odpovědi ve formátu ProblemDetails (RFC 9457).
 builder.Services.AddProblemDetails();
 
