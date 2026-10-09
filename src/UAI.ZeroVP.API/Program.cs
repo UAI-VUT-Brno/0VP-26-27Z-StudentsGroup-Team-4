@@ -1,8 +1,10 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Microsoft.OpenApi;
 using UAI.ZeroVP.API.Logging;
 using UAI.ZeroVP.Data.DependencyInjection;
 using UAI.ZeroVP.Data.InMemory;
+using UAI.ZeroVP.DTO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +58,47 @@ builder.Services.AddOpenApi(options =>
             Description = "Ukázkové API pro výuku Dockeru. Data jsou uložena pouze "
                         + "v paměti procesu a po zastavení kontejneru se ztratí."
         };
+
+        return Task.CompletedTask;
+    });
+
+    // Ukázkové hodnoty, které Swagger UI předvyplní v "Example Value" a při "Try it out".
+    options.AddSchemaTransformer((schema, context, cancellationToken) =>
+    {
+        var type = context.JsonTypeInfo.Type;
+
+        if (type == typeof(CreateTodoItemRequest))
+        {
+            schema.Example = new JsonObject
+            {
+                ["title"] = "Napsat Dockerfile",
+                ["description"] = "Připravit Dockerfile pro ToDo API.",
+                ["priority"] = "High"
+            };
+        }
+        else if (type == typeof(UpdateTodoItemRequest))
+        {
+            schema.Example = new JsonObject
+            {
+                ["title"] = "Napsat Dockerfile",
+                ["description"] = "Připravit Dockerfile pro ToDo API.",
+                ["priority"] = "Normal",
+                ["isCompleted"] = false
+            };
+        }
+        else if (type == typeof(TodoItemDto))
+        {
+            schema.Example = new JsonObject
+            {
+                ["id"] = "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                ["title"] = "Napsat Dockerfile",
+                ["description"] = "Připravit Dockerfile pro ToDo API.",
+                ["priority"] = "High",
+                ["isCompleted"] = false,
+                ["createdAtUtc"] = "2026-10-07T08:18:26+00:00",
+                ["completedAtUtc"] = null
+            };
+        }
 
         return Task.CompletedTask;
     });
