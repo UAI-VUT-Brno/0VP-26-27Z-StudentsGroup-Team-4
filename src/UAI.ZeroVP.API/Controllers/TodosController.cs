@@ -14,6 +14,7 @@ namespace UAI.ZeroVP.API.Controllers;
 [ApiController]
 [Route("api/todos")]
 [Produces("application/json")]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public sealed class TodosController : ControllerBase
 {
     private readonly ITodoRepository _repository;
@@ -32,8 +33,10 @@ public sealed class TodosController : ControllerBase
     /// <param name="isCompleted">Filtr <c>true</c>/<c>false</c>; vynechání znamená bez filtru.</param>
     /// <param name="cancellationToken">Token pro zrušení operace.</param>
     /// <response code="200">Seznam úkolů seřazený podle priority a data vzniku.</response>
+    /// <response code="400">Hodnota parametru <c>isCompleted</c> není <c>true</c> ani <c>false</c>.</response>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<TodoItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IReadOnlyList<TodoItemDto>>> GetAll(
         [FromQuery] bool? isCompleted,
         CancellationToken cancellationToken)
