@@ -47,8 +47,8 @@ namespace UAI.ZeroVP.Tests
         // --- 2. ZÁTĚŽOVÝ TEST PRO VÍCE UŽIVATELŮ (Multi-user) ---
 
         [Theory]
-        [InlineData("/api/todos", 50)]  // 50 souběžných uživatelů
-        [InlineData("/api/info", 100)]  // 100 souběžných uživatelů
+        [InlineData("/api/todos", 2500)]  // počet souběžných uživatelů
+        [InlineData("/api/info", 2500)]  // počet souběžných uživatelů
         public async Task MultiUser_GetEndpoints_ShouldRespondWithinLimit(string requestUri, int concurrentUsers)
         {
             await _client.GetAsync(requestUri); // Warm-up
