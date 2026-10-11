@@ -103,6 +103,31 @@ Přepnout ho lze nastavením nebo proměnnou prostředí:
 ASPNETCORE_ENVIRONMENT=Production Swagger__Enabled=true dotnet UAI.ZeroVP.API.dll
 ```
 
+### Co OpenAPI dokumentace obsahuje
+
+U každého endpointu popisuje dokument cestu a HTTP metodu, vstupní parametry
+s datovými typy (v cestě, v query řetězci i v těle požadavku) a všechny
+odpovědi s JSON schématem:
+
+| Kód | Význam | Schéma odpovědi | Kde |
+|---|---|---|---|
+| `200` / `201` / `204` | úspěch | `TodoItemDto`, seznam `TodoItemDto`, `InstanceInfoDto`, nebo bez těla u `204` | podle endpointu |
+| `400` | neplatný vstup (validace těla, nebo špatná hodnota filtru `isCompleted`) | `ValidationProblemDetails` | `POST`, `PUT`, `GET /api/todos` |
+| `404` | úkol se zadaným `id` neexistuje | `ProblemDetails` | endpointy s `{id}` |
+| `500` | neočekávaná chyba serveru | `ProblemDetails` | všechny endpointy |
+
+Priorita úkolu se v požadavcích i odpovědích posílá jako řetězec
+(`Low`, `Normal`, `High`). Schémata mají ukázkové hodnoty, které Swagger UI
+předvyplní v **Example Value** a při **Try it out**.
+
+Dokumentaci otevřete takto:
+
+1. Spusťte aplikaci: `dotnet run --project src/UAI.ZeroVP.API`.
+2. Interaktivní stránka je na `http://localhost:5258/swagger`.
+3. Strojově čitelný dokument (OpenAPI 3.1) je na `http://localhost:5258/openapi/v1.json`.
+
+Mimo prostředí Development je Swagger ve výchozím stavu vypnutý (viz výše).
+
 ### Rychlý test
 
 ```bash

@@ -13,6 +13,7 @@ namespace UAI.ZeroVP.API.Controllers;
 [ApiController]
 [Route("api/info")]
 [Produces("application/json")]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public sealed class InfoController : ControllerBase
 {
     private readonly ITodoRepository _repository;
