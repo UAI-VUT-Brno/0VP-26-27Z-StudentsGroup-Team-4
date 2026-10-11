@@ -17,3 +17,10 @@ Run all tests from the repository root:
 
 Tests follow the Arrange-Act-Assert pattern. They need no database, network or Docker.
 `Program.cs` (application startup) is not covered, because it would need integration tests.
+
+# Performance & Load Testing
+
+The project includes tests (FullApiPerformanceTests.cs) that verify whether the API meets the maximum response time requirement of under 500 ms. These tests use WebApplicationFactory and run in-memory, which means they measure the raw performance of the code without network latency or database delays.
+
+To run these tests and display the structured output with the measured times, use the following command in the terminal:
+dotnet test --logger "console;verbosity=detailed" --filter "FullyQualifiedName~FullApiPerformanceTests"
