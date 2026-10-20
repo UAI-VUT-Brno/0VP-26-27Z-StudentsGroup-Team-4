@@ -13,6 +13,7 @@ using Xunit.Abstractions;
 
 namespace UAI.ZeroVP.Tests
 {
+    [Trait("Category", "Performance")]
     public class FullApiPerformanceTests : IClassFixture<WebApplicationFactory<Program>>
     {
         private readonly HttpClient _client;
