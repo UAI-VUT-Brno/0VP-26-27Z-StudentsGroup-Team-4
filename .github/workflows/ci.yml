@@ -70,7 +70,6 @@ jobs:
         shell: pwsh
         run: ./scripts/security-scan.ps1
 
-      - # Místo placené gitleaks-action stáhneme a spustíme open-source binárku přímo
       - name: Secret scan (gitleaks)
         shell: bash
         run: |
