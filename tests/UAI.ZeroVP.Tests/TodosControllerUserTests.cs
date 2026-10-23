@@ -58,6 +58,19 @@ public class TodosControllerUserTests
     }
 
     [Fact]
+    public async Task GetAll_EmptyUserId_ReturnsNoTasks()
+    {
+        await AddItemAsync("Anna", "anna");
+        await AddItemAsync("Nobody", null);
+
+        var result = await CreateController().GetAll(null, "", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TodoItemDto>>(ok.Value);
+        Assert.Empty(list);
+    }
+
+    [Fact]
     public async Task Create_WithUserId_ReturnsTaskWithUserId()
     {
         var request = new CreateTodoItemRequest { Title = "New", UserId = "  anna  " };
@@ -80,6 +93,22 @@ public class TodosControllerUserTests
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TodoItemDto>(ok.Value);
         Assert.Equal("petr", dto.UserId);
+    }
+
+    [Fact]
+    public async Task Complete_PreservesUserId()
+    {
+        var item = await AddItemAsync("To finish", "anna");
+
+        var result = await CreateController().Complete(item.Id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<TodoItemDto>(ok.Value);
+        Assert.True(dto.IsCompleted);
+        Assert.Equal("anna", dto.UserId);
+
+        var stored = await _repository.GetByIdAsync(item.Id);
+        Assert.Equal("anna", stored!.UserId);
     }
 
     /// <summary>Kontroler ji normálně dostává z DI; v testu žádné DI není, tak ji dodáme sami.</summary>
