@@ -73,7 +73,9 @@ builder.Services.AddOpenApi(options =>
             {
                 ["title"] = "Napsat Dockerfile",
                 ["description"] = "Připravit Dockerfile pro ToDo API.",
-                ["priority"] = "High"
+                ["priority"] = "High",
+                ["userId"] = "anna"
+            };
             };
         }
         else if (type == typeof(UpdateTodoItemRequest))
@@ -83,7 +85,9 @@ builder.Services.AddOpenApi(options =>
                 ["title"] = "Napsat Dockerfile",
                 ["description"] = "Připravit Dockerfile pro ToDo API.",
                 ["priority"] = "Normal",
-                ["isCompleted"] = false
+                ["isCompleted"] = false,
+                ["userId"] = "anna"
+            };
             };
         }
         else if (type == typeof(TodoItemDto))
@@ -96,7 +100,9 @@ builder.Services.AddOpenApi(options =>
                 ["priority"] = "High",
                 ["isCompleted"] = false,
                 ["createdAtUtc"] = "2026-10-07T08:18:26+00:00",
-                ["completedAtUtc"] = null
+                ["completedAtUtc"] = null,
+                ["userId"] = "anna"
+            };
             };
         }
 
