@@ -1,0 +1,5 @@
+[allowlist]
+description = "Ignorovat vsechny testovaci soubory"
+paths = [
+    '''tests/.*'''
+]
