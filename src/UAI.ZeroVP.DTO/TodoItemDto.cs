@@ -27,4 +27,7 @@ public sealed record TodoItemDto
 
     /// <summary>Okamžik dokončení (UTC), nebo <c>null</c> pokud úkol hotový není.</summary>
     public DateTimeOffset? CompletedAtUtc { get; init; }
+
+    /// <summary>Due date and time (UTC), or <c>null</c> if the task has no due date.</summary>
+    public DateTimeOffset? DueAtUtc { get; init; }
 }

@@ -18,7 +18,8 @@ public static class TodoMapper
         Priority = entity.Priority,
         IsCompleted = entity.IsCompleted,
         CreatedAtUtc = entity.CreatedAtUtc,
-        CompletedAtUtc = entity.CompletedAtUtc
+        CompletedAtUtc = entity.CompletedAtUtc,
+        DueAtUtc = entity.DueAtUtc
     };
 
     /// <summary>Vytvoří novou entitu z požadavku na založení úkolu.</summary>
@@ -39,6 +40,8 @@ public static class TodoMapper
     /// <summary>
     /// Promítne data z požadavku do existující entity.
     /// Hlídá i přechod stavu dokončení, aby <c>CompletedAtUtc</c> odpovídal příznaku.
+    /// <c>DueAtUtc</c> se záměrně nemění: aktualizační požadavek ho neobsahuje,
+    /// takže úprava úkolu termín nikdy nesmaže.
     /// </summary>
     public static void ApplyTo(this UpdateTodoItemRequest request, TodoItem entity, DateTimeOffset nowUtc)
     {

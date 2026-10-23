@@ -96,7 +96,8 @@ builder.Services.AddOpenApi(options =>
                 ["priority"] = "High",
                 ["isCompleted"] = false,
                 ["createdAtUtc"] = "2026-10-07T08:18:26+00:00",
-                ["completedAtUtc"] = null
+                ["completedAtUtc"] = null,
+                ["dueAtUtc"] = "2026-10-09T09:00:00+00:00"
             };
         }
 

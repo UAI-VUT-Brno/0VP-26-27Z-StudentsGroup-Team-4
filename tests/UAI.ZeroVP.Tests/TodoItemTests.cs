@@ -13,7 +13,8 @@ public class TodoItemTests
         Priority = TodoPriority.High,
         IsCompleted = true,
         CreatedAtUtc = new DateTimeOffset(2026, 1, 15, 12, 0, 0, TimeSpan.Zero),
-        CompletedAtUtc = new DateTimeOffset(2026, 1, 16, 12, 0, 0, TimeSpan.Zero)
+        CompletedAtUtc = new DateTimeOffset(2026, 1, 16, 12, 0, 0, TimeSpan.Zero),
+        DueAtUtc = new DateTimeOffset(2026, 1, 22, 9, 30, 0, TimeSpan.Zero)
     };
 
     [Fact]
@@ -30,6 +31,18 @@ public class TodoItemTests
         Assert.Equal(original.IsCompleted, clone.IsCompleted);
         Assert.Equal(original.CreatedAtUtc, clone.CreatedAtUtc);
         Assert.Equal(original.CompletedAtUtc, clone.CompletedAtUtc);
+        Assert.Equal(original.DueAtUtc, clone.DueAtUtc);
+    }
+
+    [Fact]
+    public void Clone_TaskWithoutDueDate_KeepsDueDateNull()
+    {
+        var original = CreateItem();
+        original.DueAtUtc = null;
+
+        var clone = original.Clone();
+
+        Assert.Null(clone.DueAtUtc);
     }
 
     [Fact]
