@@ -29,7 +29,7 @@ public sealed class TodosController : ControllerBase
         _logger = logger;
     }
 
-        /// <summary>Vrátí seznam úkolů, volitelně filtrovaný podle stavu dokončení a uživatele.</summary>
+    /// <summary>Vrátí seznam úkolů, volitelně filtrovaný podle stavu dokončení a uživatele.</summary>
     /// <param name="isCompleted">Filtr <c>true</c>/<c>false</c>; vynechání znamená bez filtru.</param>
     /// <param name="userId">Identifikátor uživatele; vynechání znamená bez filtru.</param>
     /// <param name="cancellationToken">Token pro zrušení operace.</param>
