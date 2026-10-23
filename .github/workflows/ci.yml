@@ -48,3 +48,22 @@ jobs:
         with:
           name: test-results
           path: '**/test-results.trx'
+
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Security scan (vulnerable dependencies)
+        shell: pwsh
+        run: ./scripts/security-scan.ps1
