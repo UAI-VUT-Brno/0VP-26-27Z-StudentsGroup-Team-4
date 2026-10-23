@@ -92,14 +92,25 @@ public class TodoMapperTests
         Assert.Equal("petr", entity.UserId);
     }
 
-    [Fact]
-    public void ApplyTo_MissingUserId_ClearsUserId()
+        [Fact]
+    public void ApplyTo_MissingUserId_KeepsUserId()
     {
         var entity = new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = Now, UserId = "anna" };
         var request = new UpdateTodoItemRequest { Title = "A" };
 
         request.ApplyTo(entity, Now);
 
-        Assert.Null(entity.UserId);
+        Assert.Equal("anna", entity.UserId);
+    }
+
+    [Fact]
+    public void ApplyTo_BlankUserId_KeepsUserId()
+    {
+        var entity = new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = Now, UserId = "anna" };
+        var request = new UpdateTodoItemRequest { Title = "A", UserId = "   " };
+
+        request.ApplyTo(entity, Now);
+
+        Assert.Equal("anna", entity.UserId);
     }
 }

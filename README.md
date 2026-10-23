@@ -122,8 +122,9 @@ předvyplní v **Example Value** a při **Try it out**.
 
 Úkol může mít volitelný `userId` (libovolný řetězec do 200 znaků, např. jméno nebo e-mail).
 Zatím slouží jen jako štítek a neověřuje se; počítá se s ním pro pozdější přihlašování.
-Filtr `?userId=` porovnává hodnotu bez ohledu na velikost písmen. U `PUT` jde o úplnou
-aktualizaci, takže vynechané `userId` se z úkolu smaže.
+Filtr `?userId=` porovnává hodnotu bez ohledu na velikost písmen; prázdná hodnota
+`?userId=` nevrátí žádný úkol. U `PUT` se vynechané `userId` ignoruje a u úkolu
+zůstane původní hodnota; změní se jen tehdy, když klient pošle novou.
 
 Dokumentaci otevřete takto:
 
