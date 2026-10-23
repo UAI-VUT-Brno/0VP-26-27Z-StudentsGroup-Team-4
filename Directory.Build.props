@@ -11,12 +11,11 @@
     <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
   </PropertyGroup>
 
-  <!-- Statická analýza kódu (SAST) -->
+    <!-- Statická analýza kódu (SAST): Roslyn analyzátory. Pravidla kategorie Security
+       jsou povýšena na chyby v .editorconfig, takže build při nálezu selže. -->
   <PropertyGroup>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <AnalysisLevel>latest-All</AnalysisLevel>
-    <!-- Volitelně: pokud chceš, aby i chyby v analýze kódu shodily build, odkomentuj řádek níže -->
-    <!-- <TreatWarningsAsErrors>true</TreatWarningsAsErrors> -->
+    <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
 
 </Project>
