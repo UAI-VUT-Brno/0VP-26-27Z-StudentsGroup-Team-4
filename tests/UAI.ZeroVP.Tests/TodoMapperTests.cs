@@ -50,4 +50,56 @@ public class TodoMapperTests
         Assert.True(entity.IsCompleted);
         Assert.Equal(Now, entity.CompletedAtUtc);
     }
+
+    [Fact]
+    public void ToEntity_CopiesTrimmedUserId()
+    {
+        var request = new CreateTodoItemRequest { Title = "A", UserId = "  anna  " };
+
+        var entity = request.ToEntity(Now);
+
+        Assert.Equal("anna", entity.UserId);
+    }
+
+    [Fact]
+    public void ToEntity_BlankUserId_BecomesNull()
+    {
+        var request = new CreateTodoItemRequest { Title = "A", UserId = "   " };
+
+        var entity = request.ToEntity(Now);
+
+        Assert.Null(entity.UserId);
+    }
+
+    [Fact]
+    public void ToDto_CopiesUserId()
+    {
+        var entity = new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = Now, UserId = "anna" };
+
+        var dto = entity.ToDto();
+
+        Assert.Equal("anna", dto.UserId);
+    }
+
+    [Fact]
+    public void ApplyTo_ChangesUserId()
+    {
+        var entity = new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = Now, UserId = "anna" };
+        var request = new UpdateTodoItemRequest { Title = "A", UserId = "petr" };
+
+        request.ApplyTo(entity, Now);
+
+        Assert.Equal("petr", entity.UserId);
+    }
+
+    [Fact]
+    public void ApplyTo_MissingUserId_ClearsUserId()
+    {
+        var entity = new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = Now, UserId = "anna" };
+        var request = new UpdateTodoItemRequest { Title = "A" };
+
+        request.ApplyTo(entity, Now);
+
+        Assert.Null(entity.UserId);
+    }
 }
