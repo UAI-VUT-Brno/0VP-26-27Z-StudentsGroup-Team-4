@@ -128,6 +128,9 @@ public class TodosControllerUpdateTests
         public Task<TodoItem> AddAsync(TodoItem item, CancellationToken cancellationToken = default) =>
             Task.FromResult(item);
 
+        public Task<IReadOnlyList<TodoItem>> AddRangeAsync(IEnumerable<TodoItem> items, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<TodoItem>>(items.ToList());
+
         public Task<bool> UpdateAsync(TodoItem item, CancellationToken cancellationToken = default) =>
             Task.FromResult(false);
 

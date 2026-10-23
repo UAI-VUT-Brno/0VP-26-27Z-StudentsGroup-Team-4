@@ -46,6 +46,9 @@ public sealed class InMemoryTodoRepository : ITodoRepository
             .Where(item => isCompleted is null || item.IsCompleted == isCompleted)
             .OrderByDescending(item => item.Priority)
             .ThenBy(item => item.CreatedAtUtc)
+            // Occurrences of a weekly sequence are created in one call and share CreatedAtUtc;
+            // DueAtUtc keeps them in chronological order.
+            .ThenBy(item => item.DueAtUtc)
             .Select(item => item.Clone())
             .ToList();
 
@@ -73,6 +76,45 @@ public sealed class InMemoryTodoRepository : ITodoRepository
         }
 
         return Task.FromResult(stored.Clone());
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// All-or-nothing is implemented by undoing the already added items when one of them is rejected.
+    /// A concurrent reader may therefore briefly see part of a batch that is about to be rolled back;
+    /// for an in-memory store that is an accepted trade-off against locking every read.
+    /// </remarks>
+    public Task<IReadOnlyList<TodoItem>> AddRangeAsync(IEnumerable<TodoItem> items, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Copy everything first: the stored items must not be shared with the caller,
+        // and a null item is rejected before anything is written.
+        var toStore = items
+            .Select(item => (item ?? throw new ArgumentException("The batch must not contain null items.", nameof(items))).Clone())
+            .ToList();
+
+        var added = new List<TodoItem>(toStore.Count);
+        foreach (var item in toStore)
+        {
+            if (!_items.TryAdd(item.Id, item))
+            {
+                // Remove by key AND value, so only the instances added by this call are undone.
+                foreach (var addedItem in added)
+                {
+                    _items.TryRemove(new KeyValuePair<Guid, TodoItem>(addedItem.Id, addedItem));
+                }
+
+                throw new InvalidOperationException($"A task with id {item.Id} already exists.");
+            }
+
+            added.Add(item);
+        }
+
+        IReadOnlyList<TodoItem> result = toStore.Select(item => item.Clone()).ToList();
+
+        return Task.FromResult(result);
     }
 
     /// <inheritdoc />
