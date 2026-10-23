@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)   # koren repozitare
 $failed = $false
 
-Write-Host '==> [1/1] Zranitelne NuGet balicky'
+Write-Host '==> [1/2] Zranitelne NuGet balicky'
 
 dotnet restore UAI.ZeroVP.sln
 if ($LASTEXITCODE -ne 0) {
@@ -44,6 +44,25 @@ else {
         Write-Host 'OK: zadne zname zranitelnosti.' -ForegroundColor Green
     }
 }
+
+Write-Host ""
+Write-Host '==> [2/2] Detekce secretu (Gitleaks)'
+# Ocekavame, ze na lokalu mozna gitleaks vyvojar jeste nema
+if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
+    # Spustime gitleaks v koreni repozitare
+    $gitleaksOutput = gitleaks detect --source . --no-banner --verbose 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $gitleaksOutput
+        Write-Host "Chyba: Nalezeny unikajici secrety!" -ForegroundColor Red
+        $failed = $true
+    } else {
+        Write-Host "OK: Zadne secrety nenalezeny." -ForegroundColor Green
+    }
+} else {
+    Write-Host "Varovani: 'gitleaks' neni nainstalovan." -ForegroundColor Yellow
+    Write-Host "Pro lokalni detekci si ho stahni: https://github.com/gitleaks/gitleaks"
+}
+Write-Host ""
 
 if ($failed) {
     Write-Host 'SECURITY SCAN: SELHAL' -ForegroundColor Red
