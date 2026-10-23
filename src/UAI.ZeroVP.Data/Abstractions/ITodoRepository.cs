@@ -9,9 +9,6 @@ namespace UAI.ZeroVP.Data.Abstractions;
 /// </summary>
 public interface ITodoRepository
 {
-    /// <summary>Vrátí všechny úkoly, volitelně filtrované podle stavu dokončení.</summary>
-    /// <param name="isCompleted">Filtr na dokončenost; <c>null</c> = bez filtru.</param>
-    /// <param name="cancellationToken">Token pro zrušení operace.</param>
     /// <summary>Vrátí všechny úkoly, volitelně filtrované podle stavu dokončení a uživatele.</summary>
     /// <param name="isCompleted">Filtr na dokončenost; <c>null</c> = bez filtru.</param>
     /// <param name="userId">Filtr na uživatele; <c>null</c> = bez filtru.</param>
