@@ -4,6 +4,12 @@
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts/security-scan.ps1
 #>
+
+param(
+    # V CI nastavujeme: chybejici gitleaks je chyba, ne jen varovani.
+    [switch]$RequireGitleaks
+)
+
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)   # koren repozitare
 $failed = $false
@@ -47,25 +53,42 @@ else {
 
 Write-Host ""
 Write-Host '==> [2/2] Detekce secretu (Gitleaks)'
-# Ocekavame, ze na lokalu mozna gitleaks vyvojar jeste nema
+$skipped = $false
+
 if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
-    # Spustime gitleaks v koreni repozitare
+    # gitleaks loguje na stderr; ve Windows PowerShellu 5.1 by to s 'Stop' vyhodilo vyjimku.
+    $prevPref = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     $gitleaksOutput = gitleaks detect --source . --no-banner --verbose 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host $gitleaksOutput
-        Write-Host "Chyba: Nalezeny unikajici secrety!" -ForegroundColor Red
+    $gitleaksExit = $LASTEXITCODE
+    $ErrorActionPreference = $prevPref
+
+    if ($gitleaksExit -ne 0) {
+        $gitleaksOutput | ForEach-Object { Write-Host $_ }
+        Write-Host 'Chyba: nalezeny unikajici secrety!' -ForegroundColor Red
         $failed = $true
-    } else {
-        Write-Host "OK: Zadne secrety nenalezeny." -ForegroundColor Green
     }
-} else {
-    Write-Host "Varovani: 'gitleaks' neni nainstalovan." -ForegroundColor Yellow
-    Write-Host "Pro lokalni detekci si ho stahni: https://github.com/gitleaks/gitleaks"
+    else {
+        Write-Host 'OK: zadne secrety nenalezeny.' -ForegroundColor Green
+    }
 }
-Write-Host ""
+elseif ($RequireGitleaks) {
+    Write-Host "Chyba: 'gitleaks' neni nainstalovan a je vyzadovan (-RequireGitleaks)." -ForegroundColor Red
+    $failed = $true
+}
+else {
+    Write-Host "Varovani: 'gitleaks' neni nainstalovan, kontrola secretu PRESKOCENA." -ForegroundColor Yellow
+    Write-Host '  Instalace: winget install gitleaks'
+    $skipped = $true
+}
+Write-Host ''
 
 if ($failed) {
     Write-Host 'SECURITY SCAN: SELHAL' -ForegroundColor Red
     exit 1
+}
+if ($skipped) {
+    Write-Host 'SECURITY SCAN: OK (ale kontrola secretu byla preskocena)' -ForegroundColor Yellow
+    exit 0
 }
 Write-Host 'SECURITY SCAN: OK' -ForegroundColor Green
