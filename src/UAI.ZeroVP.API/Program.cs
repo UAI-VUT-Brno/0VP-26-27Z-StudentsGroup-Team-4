@@ -76,7 +76,6 @@ builder.Services.AddOpenApi(options =>
                 ["priority"] = "High",
                 ["userId"] = "anna"
             };
-            };
         }
         else if (type == typeof(UpdateTodoItemRequest))
         {
@@ -87,7 +86,6 @@ builder.Services.AddOpenApi(options =>
                 ["priority"] = "Normal",
                 ["isCompleted"] = false,
                 ["userId"] = "anna"
-            };
             };
         }
         else if (type == typeof(TodoItemDto))
@@ -102,7 +100,6 @@ builder.Services.AddOpenApi(options =>
                 ["createdAtUtc"] = "2026-10-07T08:18:26+00:00",
                 ["completedAtUtc"] = null,
                 ["userId"] = "anna"
-            };
             };
         }
 
