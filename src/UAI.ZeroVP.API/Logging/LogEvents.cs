@@ -47,4 +47,7 @@ public static class LogEvents
 
     /// <summary>Úkol byl smazán.</summary>
     public static readonly EventId TodoDeleted = new(3001, nameof(TodoDeleted));
+
+    /// <summary>A weekly sequence of tasks was created (POST /api/todos/repeat).</summary>
+    public static readonly EventId WeeklyTodosCreated = new(3002, nameof(WeeklyTodosCreated));
 }

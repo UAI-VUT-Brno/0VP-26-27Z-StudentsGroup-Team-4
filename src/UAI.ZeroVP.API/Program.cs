@@ -86,6 +86,17 @@ builder.Services.AddOpenApi(options =>
                 ["isCompleted"] = false
             };
         }
+        else if (type == typeof(CreateWeeklyTodoItemsRequest))
+        {
+            schema.Example = new JsonObject
+            {
+                ["title"] = "Weekly status report",
+                ["description"] = "Send the status report to the team.",
+                ["priority"] = "Normal",
+                ["firstDueAtUtc"] = "2026-11-02T09:00:00+00:00",
+                ["repeatCount"] = 3
+            };
+        }
         else if (type == typeof(TodoItemDto))
         {
             schema.Example = new JsonObject
