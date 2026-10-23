@@ -32,6 +32,8 @@ public sealed class TodoItem
 
     /// <summary>Interní audit – poslední změna záznamu. Do DTO se nepromítá.</summary>
     public DateTimeOffset UpdatedAtUtc { get; set; }
+    /// <summary>Identifikátor uživatele, kterému úkol patří (zatím jen řetězec, bez ověřování).</summary>
+    public string? UserId { get; set; }
 
     /// <summary>
     /// Vytvoří hlubokou kopii entity. In-memory repozitář ji používá proto,
@@ -47,6 +49,7 @@ public sealed class TodoItem
         IsCompleted = IsCompleted,
         CreatedAtUtc = CreatedAtUtc,
         CompletedAtUtc = CompletedAtUtc,
-        UpdatedAtUtc = UpdatedAtUtc
+        UpdatedAtUtc = UpdatedAtUtc,
+        UserId = UserId
     };
 }
