@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)   # koren repozitare
 $failed = $false
 
-Write-Host '==> [1/2] Zranitelne NuGet balicky'
+Write-Host '==> [1/3] Zranitelne NuGet balicky'
 
 dotnet restore UAI.ZeroVP.sln
 if ($LASTEXITCODE -ne 0) {
@@ -51,8 +51,21 @@ else {
     }
 }
 
+Write-Host ''
+Write-Host '==> [2/3] Staticka analyza kodu (Roslyn security analyzers)'
+
+dotnet build UAI.ZeroVP.sln --configuration Release --nologo
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'Build selhal (pravdepodobne nalez bezpecnostniho analyzatoru CA3xxx/CA5xxx, viz chyby vyse).' -ForegroundColor Red
+    $failed = $true
+}
+else {
+    Write-Host 'OK: analyzatory nenasly bezpecnostni problemy.' -ForegroundColor Green
+}
+Write-Host ''
+
 Write-Host ""
-Write-Host '==> [2/2] Detekce secretu (Gitleaks)'
+Write-Host '==> [3/3] Detekce secretu (Gitleaks)'
 $skipped = $false
 
 if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
@@ -92,3 +105,4 @@ if ($skipped) {
     exit 0
 }
 Write-Host 'SECURITY SCAN: OK' -ForegroundColor Green
+
