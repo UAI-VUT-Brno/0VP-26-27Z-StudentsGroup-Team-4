@@ -66,13 +66,18 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Security scan (vulnerable dependencies)
-        shell: pwsh
-        run: ./scripts/security-scan.ps1
-
-      - name: Secret scan (gitleaks)
+      - name: Install gitleaks
         shell: bash
         run: |
-          wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
-          tar -xzf gitleaks_8.21.2_linux_x64.tar.gz
-          ./gitleaks detect --source . --verbose --no-banner
+          VERSION=8.21.2
+          FILE="gitleaks_${VERSION}_linux_x64.tar.gz"
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}"
+          wget -q "${BASE}/${FILE}" "${BASE}/gitleaks_${VERSION}_checksums.txt"
+          sha256sum --ignore-missing -c "gitleaks_${VERSION}_checksums.txt"
+          tar -xzf "${FILE}" gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Security scan (dependencies + secrets)
+        shell: pwsh
+        run: ./scripts/security-scan.ps1 -RequireGitleaks
