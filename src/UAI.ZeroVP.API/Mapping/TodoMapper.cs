@@ -38,6 +38,52 @@ public static class TodoMapper
     };
 
     /// <summary>
+    /// Creates the entities of a weekly sequence: the first occurrence plus
+    /// <see cref="CreateWeeklyTodoItemsRequest.RepeatCount"/> more, each exactly seven days
+    /// after the previous one. The result is in chronological order.
+    /// <para>
+    /// Every occurrence is a separate, regular task with its own <c>Id</c> and due date.
+    /// Title, description and priority are copied (title and description trimmed as for a single
+    /// task) and every occurrence starts incomplete. All occurrences share the same creation time.
+    /// </para>
+    /// <para>
+    /// The first due date is normalized to UTC and the calculation is plain UTC arithmetic
+    /// (adds 7 x 24 hours), so it is not affected by daylight saving time or the server time zone.
+    /// </para>
+    /// </summary>
+    /// <param name="request">Validated request; <c>FirstDueAtUtc</c> must be set.</param>
+    /// <param name="nowUtc">Current time - passed in from outside for testability.</param>
+    public static IReadOnlyList<TodoItem> ToEntities(this CreateWeeklyTodoItemsRequest request, DateTimeOffset nowUtc)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var firstDueAtUtc = request.FirstDueAtUtc?.ToUniversalTime()
+            ?? throw new ArgumentException("FirstDueAtUtc must be set.", nameof(request));
+
+        var title = request.Title.Trim();
+        var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+
+        var occurrences = new List<TodoItem>(request.RepeatCount + 1);
+        for (var index = 0; index <= request.RepeatCount; index++)
+        {
+            occurrences.Add(new TodoItem
+            {
+                Id = Guid.NewGuid(),
+                Title = title,
+                Description = description,
+                Priority = request.Priority,
+                IsCompleted = false,
+                CreatedAtUtc = nowUtc,
+                CompletedAtUtc = null,
+                DueAtUtc = firstDueAtUtc.AddDays(CreateWeeklyTodoItemsRequest.DaysBetweenOccurrences * index),
+                UpdatedAtUtc = nowUtc
+            });
+        }
+
+        return occurrences;
+    }
+
+    /// <summary>
     /// Promítne data z požadavku do existující entity.
     /// Hlídá i přechod stavu dokončení, aby <c>CompletedAtUtc</c> odpovídal příznaku.
     /// <c>DueAtUtc</c> se záměrně nemění: aktualizační požadavek ho neobsahuje,
