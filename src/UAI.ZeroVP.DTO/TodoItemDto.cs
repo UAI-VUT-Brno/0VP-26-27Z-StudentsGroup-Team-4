@@ -27,4 +27,7 @@ public sealed record TodoItemDto
 
     /// <summary>Okamžik dokončení (UTC), nebo <c>null</c> pokud úkol hotový není.</summary>
     public DateTimeOffset? CompletedAtUtc { get; init; }
+
+    /// <summary>Identifikátor uživatele, kterému úkol patří, nebo <c>null</c>.</summary>
+    public string? UserId { get; init; }
 }

@@ -27,4 +27,8 @@ public sealed record CreateTodoItemRequest
     /// <summary>Priorita úkolu. Výchozí hodnota je <see cref="TodoPriority.Normal"/>.</summary>
     [EnumDataType(typeof(TodoPriority), ErrorMessage = "Neplatná hodnota priority.")]
     public TodoPriority Priority { get; init; } = TodoPriority.Normal;
+    
+    /// <summary>Volitelný identifikátor uživatele (jméno, ID nebo e-mail), maximálně 200 znaků.</summary>
+    [StringLength(200, ErrorMessage = "Identifikátor uživatele smí mít nejvýše 200 znaků.")]
+    public string? UserId { get; init; }
 }

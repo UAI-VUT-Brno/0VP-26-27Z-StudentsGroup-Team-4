@@ -105,7 +105,7 @@ public class TodosControllerUpdateTests
         await _repository.AddAsync(CreateItem("Open 1"));
         await _repository.AddAsync(CreateItem("Open 2"));
 
-        var result = await CreateController().GetAll(filter, CancellationToken.None);
+        var result = await CreateController().GetAll(filter, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<TodoItemDto>>(ok.Value);
@@ -119,7 +119,7 @@ public class TodosControllerUpdateTests
 
         public VanishingRepository(TodoItem item) => _item = item;
 
-        public Task<IReadOnlyList<TodoItem>> GetAllAsync(bool? isCompleted = null, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<TodoItem>> GetAllAsync(bool? isCompleted = null, string? userId = null, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<TodoItem>>(new[] { _item });
 
         public Task<TodoItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>

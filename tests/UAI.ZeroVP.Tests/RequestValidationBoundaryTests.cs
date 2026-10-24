@@ -55,4 +55,28 @@ public class RequestValidationBoundaryTests
 
         Assert.False(IsValid(request));
     }
+
+    [Fact]
+    public void CreateRequest_UserId200Characters_IsValid()
+    {
+        var request = new CreateTodoItemRequest { Title = "A", UserId = new string('u', 200) };
+
+        Assert.True(IsValid(request));
+    }
+
+    [Fact]
+    public void CreateRequest_UserIdLongerThan200Characters_IsInvalid()
+    {
+        var request = new CreateTodoItemRequest { Title = "A", UserId = new string('u', 201) };
+
+        Assert.False(IsValid(request));
+    }
+
+    [Fact]
+    public void UpdateRequest_UserIdLongerThan200Characters_IsInvalid()
+    {
+        var request = new UpdateTodoItemRequest { Title = "A", UserId = new string('u', 201) };
+
+        Assert.False(IsValid(request));
+    }
 }

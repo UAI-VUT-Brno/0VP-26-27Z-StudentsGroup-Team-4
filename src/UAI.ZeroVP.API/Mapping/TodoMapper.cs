@@ -18,7 +18,8 @@ public static class TodoMapper
         Priority = entity.Priority,
         IsCompleted = entity.IsCompleted,
         CreatedAtUtc = entity.CreatedAtUtc,
-        CompletedAtUtc = entity.CompletedAtUtc
+        CompletedAtUtc = entity.CompletedAtUtc,
+        UserId = entity.UserId
     };
 
     /// <summary>Vytvoří novou entitu z požadavku na založení úkolu.</summary>
@@ -33,7 +34,8 @@ public static class TodoMapper
         IsCompleted = false,
         CreatedAtUtc = nowUtc,
         CompletedAtUtc = null,
-        UpdatedAtUtc = nowUtc
+        UpdatedAtUtc = nowUtc,
+        UserId = string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId.Trim()
     };
 
     /// <summary>
@@ -45,6 +47,11 @@ public static class TodoMapper
         entity.Title = request.Title.Trim();
         entity.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         entity.Priority = request.Priority;
+        // Vynechané (nebo prázdné) userId vlastníka nemění; přepíše se jen poslaná hodnota.
+        if (!string.IsNullOrWhiteSpace(request.UserId))
+        {
+            entity.UserId = request.UserId.Trim();
+        }
         entity.SetCompletionState(request.IsCompleted, nowUtc);
         entity.UpdatedAtUtc = nowUtc;
     }
