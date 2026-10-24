@@ -138,6 +138,10 @@ curl -X POST http://localhost:5258/api/todos \
 curl http://localhost:5258/api/info
 ```
 
+## Bezpečnostní skenování
+
+Repozitář má automatickou bezpečnostní kontrolu (zranitelné balíčky, statická analýza, detekce secretů). Lokálně ji spustíš příkazem `powershell -ExecutionPolicy Bypass -File scripts/security-scan.ps1`, v GitHub Actions běží jako job `security-scan`. Podrobnosti jsou v [docs/ci-pipeline.md](docs/ci-pipeline.md).
+
 ## Poznámka ke kódování
 
 Zdrojové soubory jsou uloženy jako **UTF-8 s BOM**. Bez BOM dekóduje kompilátor C#

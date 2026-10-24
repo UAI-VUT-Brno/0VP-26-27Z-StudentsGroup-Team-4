@@ -48,3 +48,36 @@ jobs:
         with:
           name: test-results
           path: '**/test-results.trx'
+
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install gitleaks
+        shell: bash
+        run: |
+          VERSION=8.21.2
+          FILE="gitleaks_${VERSION}_linux_x64.tar.gz"
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}"
+          wget -q "${BASE}/${FILE}" "${BASE}/gitleaks_${VERSION}_checksums.txt"
+          sha256sum --ignore-missing -c "gitleaks_${VERSION}_checksums.txt"
+          tar -xzf "${FILE}" gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Security scan (dependencies + secrets)
+        shell: pwsh
+        run: ./scripts/security-scan.ps1 -RequireGitleaks
