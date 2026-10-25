@@ -1,0 +1,11 @@
+title = "UAI.ZeroVP gitleaks config"
+
+# Zachovat vsechna vychozi pravidla gitleaks a jen pridat vyjimky.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Testovaci soubory obsahuji smyslena data"
+paths = [
+  '''(?i)tests/.*'''
+]

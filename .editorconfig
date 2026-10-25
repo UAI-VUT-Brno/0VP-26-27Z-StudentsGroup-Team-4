@@ -13,6 +13,7 @@ trim_trailing_whitespace = true
 
 [*.cs]
 charset = utf-8-bom
+dotnet_analyzer_diagnostic.category-Security.severity = error
 
 [*.{json,yml,yaml}]
 indent_size = 2
