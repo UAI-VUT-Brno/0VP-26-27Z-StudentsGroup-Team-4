@@ -25,8 +25,28 @@ Skript `scripts/security-scan.ps1` provádí tři kontroly. Lokálně i v CI se 
 - Konfigurace: `.gitleaks.toml` rozšiřuje výchozí pravidla gitleaks (`useDefault = true`) a ignoruje složku `tests/`, kde jsou záměrně smyšlená data. Tajemství v testech se tedy nezachytí.
 - V CI se gitleaks stahuje v pevné verzi a ověřuje se jeho kontrolní součet. Skript se tam spouští s `-RequireGitleaks`, takže chybějící gitleaks je chyba.
 
-## Automatické aktualizace (Dependabot)
-`.github/dependabot.yml` týdně kontroluje nové verze NuGet balíčků a GitHub Actions a vytváří pull requesty s aktualizacemi.
+## Závislosti: doporučení místo automatických PR
+
+Dependabot **nevytváří žádné větve ani pull requesty**. Aktualizace závislostí děláme vědomě a ručně, Dependabot nás pouze upozorňuje, co stojí za zvážení.
+
+### Konfigurace Dependabota
+- `.github/dependabot.yml` má pro NuGet i GitHub Actions nastaveno `open-pull-requests-limit: 0`, takže pro verzní aktualizace žádné PR nevzniká.
+- V *Settings → Advanced Security* jsou **Dependabot security updates** (včetně grouped) vypnuté, takže PR nevznikají ani kvůli zranitelnostem.
+- **Dependabot alerts** zůstávají zapnuté. Zranitelné balíčky se zobrazují v záložce *Security → Dependabot* a nic do repozitáře nepushují. Slouží jako doporučení, které balíčky je vhodné aktualizovat.
+
+### Zjištění zastaralých balíčků
+Přehled balíčků, které mají novější verzi, získáš lokálně:
+```powershell
+dotnet list package --outdated
+dotnet list package --vulnerable --include-transitive
+```
+
+### Jak aktualizovat balíček ručně
+1. Vyber balíček z alertu v záložce Security nebo z výpisu příkazů výše a zvaž, zda aktualizace dává smysl (major verze může obsahovat breaking changes).
+2. Vytvoř krátkodobou větev (např. `fix/update-<balicek>`).
+3. Aktualizuj balíček, např. `dotnet add <projekt> package <Balicek> --version <verze>`.
+4. Spusť `dotnet build`, `dotnet test` a `scripts/security-scan.ps1`.
+5. Otevři pull request do `main`. Po zelené CI ho sluč a větev smaž.
 
 ## Lokální spuštění
 
@@ -39,7 +59,7 @@ Skript `scripts/security-scan.ps1` provádí tři kontroly. Lokálně i v CI se 
 
 ## Co dělat při nálezu
 
-- **Zranitelný balíček:** aktualizuj balíček na opravenou verzi (odkaz na advisory je ve výpisu).
+- **Zranitelný balíček:** aktualizuj balíček na opravenou verzi (odkaz na advisory je ve výpisu) podle postupu v části „Jak aktualizovat balíček ručně". Automatický PR od Dependabota nevznikne.
 - **Chyba analyzátoru `CAxxxx`:** oprav kód podle odkazu v chybové hlášce.
 - **Uniklý secret:** považuj ho za kompromitovaný, zneplatni ho (rotace klíče/tokenu) a teprve potom ho odstraň z kódu. Samotné smazání souboru ho z historie Gitu neodstraní.
 
