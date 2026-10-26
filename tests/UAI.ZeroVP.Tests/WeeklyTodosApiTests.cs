@@ -82,6 +82,27 @@ public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Repeat_WithUserId_OccurrencesAppearInUserFilter()
+    {
+        const string body = """
+            {"title":"Weekly for repeat-user","firstDueAtUtc":"2026-11-02T09:00:00Z",
+             "repeatCount":2,"userId":"repeat-user"}
+            """;
+        using var response = await _client.PostAsync(Url, Json(body));
+        var created = (await response.Content.ReadFromJsonAsync<List<TodoItemDto>>(JsonOptions))!;
+
+        var filtered = await _client.GetFromJsonAsync<List<TodoItemDto>>(
+            "/api/todos?userId=repeat-user", JsonOptions);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.All(created, t => Assert.Equal("repeat-user", t.UserId));
+        Assert.Equal(3, filtered!.Count);
+        Assert.Equal(
+            created.Select(t => t.Id).OrderBy(id => id),
+            filtered.Select(t => t.Id).OrderBy(id => id));
+    }
+
+    [Fact]
     public async Task Repeat_OccurrencesAreIndependent_DeletingOneKeepsTheOthers()
     {
         const string body = """{"title":"Independent","firstDueAtUtc":"2026-11-02T09:00:00Z","repeatCount":2}""";
