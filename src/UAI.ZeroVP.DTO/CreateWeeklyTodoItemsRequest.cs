@@ -45,6 +45,13 @@ public sealed record CreateWeeklyTodoItemsRequest : IValidatableObject
     public TodoPriority Priority { get; init; } = TodoPriority.Normal;
 
     /// <summary>
+    /// Optional identifier of the user who owns the tasks (name, ID or e-mail), copied to every
+    /// occurrence. At most 200 characters. A blank value is stored as <c>null</c>.
+    /// </summary>
+    [StringLength(200, ErrorMessage = "User identifier must be at most 200 characters long.")]
+    public string? UserId { get; init; }
+
+    /// <summary>
     /// Date and time of the first occurrence, in UTC. Required.
     /// <para>
     /// Nullable on purpose: a missing value must be distinguishable from a real date and be
