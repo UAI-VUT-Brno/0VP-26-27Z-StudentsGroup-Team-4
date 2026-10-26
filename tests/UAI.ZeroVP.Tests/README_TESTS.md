@@ -14,6 +14,12 @@ Run all tests from the repository root:
 | DataRegistrationTests | DI registration `AddInMemoryTodoData` | Small `ServiceCollection`; singleton, options, disabled seed |
 | RequestValidationTests, RequestValidationBoundaryTests | Validation attributes of request DTOs | `Validator.TryValidateObject`; title 200 characters, description 1000 characters, empty title, invalid priority |
 | TodosControllerTests, TodosControllerUpdateTests, InfoControllerTests | API controllers | Controller is called as a normal class (no HTTP server); checks the result type (Ok, Created, NoContent, 404) and its content |
+| TodoMapperDueDateTests | `DueAtUtc` in mapping | `ToDto` copies it, `ToEntity` leaves it empty, `ApplyTo` and `SetCompletionState` never erase it |
+| InMemoryTodoRepositoryAddRangeTests | `AddRangeAsync` and its all-or-nothing contract | Real repository; order, copies, due dates, duplicate id inside the batch, id already stored (rollback), null input, cancellation, sort order of one sequence |
+| WeeklyRequestValidationTests | Validation of `CreateWeeklyTodoItemsRequest` | `Validator.TryValidateObject`; `repeatCount` 0/1/52/53, missing first due date, title/description limits, last occurrence beyond the supported date range |
+| TodoMapperWeeklyTests | Weekly date calculation in `ToEntities` | Direct calls; occurrence count, exactly 7 days apart, month/year/leap-day/DST boundaries, UTC normalization, copied fields, every occurrence starts incomplete |
+| TodosControllerWeeklyTests | `POST /api/todos/repeat` action | Controller as a normal class with a fixed clock; 201, occurrences, persistence, independence of occurrences, log event |
+| WeeklyTodosApiTests | `POST /api/todos/repeat` over HTTP | `WebApplicationFactory`; JSON binding and the standard 400 response for 15 invalid bodies, no task created |
 
 Tests follow the Arrange-Act-Assert pattern. They need no database, network or Docker.
 `Program.cs` (application startup) is not covered, because it would need integration tests.

@@ -38,6 +38,37 @@ Content-Type: application/json
   "priority": "High"
 }
 
+### Weekly sequence: the first occurrence + 3 more = 4 tasks, exactly 7 days apart
+POST {{UAI.ZeroVP.API_HostAddress}}/api/todos/repeat
+Content-Type: application/json
+
+{
+  "title": "Weekly status report",
+  "description": "Send the status report to the team.",
+  "priority": "Normal",
+  "firstDueAtUtc": "2026-11-02T09:00:00Z",
+  "repeatCount": 3
+}
+
+### Invalid repeatCount (allowed range is 1-52) - returns 400 and creates no tasks
+POST {{UAI.ZeroVP.API_HostAddress}}/api/todos/repeat
+Content-Type: application/json
+
+{
+  "title": "Weekly status report",
+  "firstDueAtUtc": "2026-11-02T09:00:00Z",
+  "repeatCount": 53
+}
+
+### Missing firstDueAtUtc - returns 400 and creates no tasks
+POST {{UAI.ZeroVP.API_HostAddress}}/api/todos/repeat
+Content-Type: application/json
+
+{
+  "title": "Weekly status report",
+  "repeatCount": 3
+}
+
 ### Neexistující úkol – vrátí 404 s ProblemDetails
 GET {{UAI.ZeroVP.API_HostAddress}}/api/todos/00000000-0000-0000-0000-000000000000
 Accept: application/json

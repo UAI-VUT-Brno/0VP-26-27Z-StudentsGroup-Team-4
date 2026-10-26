@@ -21,6 +21,15 @@ public interface ITodoRepository
     /// <summary>Uloží nový úkol a vrátí jeho výslednou podobu včetně přiděleného <c>Id</c>.</summary>
     Task<TodoItem> AddAsync(TodoItem item, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Stores a batch of new tasks as one all-or-nothing operation and returns their stored form
+    /// in the same order. If any task cannot be stored (for example because its <c>Id</c> already
+    /// exists), none of the batch is stored and the call throws.
+    /// </summary>
+    /// <param name="items">The tasks to store. Must not contain <c>null</c> items; an empty batch is allowed.</param>
+    /// <param name="cancellationToken">Token for cancelling the operation.</param>
+    Task<IReadOnlyList<TodoItem>> AddRangeAsync(IEnumerable<TodoItem> items, CancellationToken cancellationToken = default);
+
     /// <summary>Přepíše existující úkol. Vrací <c>false</c>, pokud záznam neexistuje.</summary>
     Task<bool> UpdateAsync(TodoItem item, CancellationToken cancellationToken = default);
 

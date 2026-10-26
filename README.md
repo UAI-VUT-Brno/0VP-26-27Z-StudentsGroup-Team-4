@@ -22,7 +22,7 @@ v sekci [Výukové materiály k Dockeru](#výukové-materiály-k-dockeru).
 
 | Projekt | Typ | Obsah | Závislosti |
 |---|---|---|---|
-| `UAI.ZeroVP.DTO` | Class library | Kontrakt API – `TodoItemDto`, `CreateTodoItemRequest`, `UpdateTodoItemRequest`, `InstanceInfoDto`, výčet `TodoPriority` | žádné |
+| `UAI.ZeroVP.DTO` | Class library | Kontrakt API – `TodoItemDto`, `CreateTodoItemRequest`, `CreateWeeklyTodoItemsRequest`, `UpdateTodoItemRequest`, `InstanceInfoDto`, výčet `TodoPriority` | žádné |
 | `UAI.ZeroVP.Data` | Class library | Entita `TodoItem`, rozhraní `ITodoRepository`, paměťová implementace `InMemoryTodoRepository`, registrace do DI | `DTO` |
 | `UAI.ZeroVP.API` | ASP.NET Core Web API | Kontrolery, mapování entita ↔ DTO, konfigurace pipeline | `DTO`, `Data` |
 
@@ -63,6 +63,7 @@ API naslouchá na `http://localhost:5258`. Kořen `/` přesměruje na Swagger UI
 | `GET` | `/api/todos` | Seznam úkolů; volitelné filtry `?isCompleted=true\|false` a `?userId=anna` |
 | `GET` | `/api/todos/{id}` | Detail úkolu |
 | `POST` | `/api/todos` | Založení úkolu → `201 Created` + hlavička `Location` |
+| `POST` | `/api/todos/repeat` | Creates a weekly sequence of the same task (`repeatCount` + 1 tasks, seven days apart) → `201 Created` + list of tasks, see [docs/weekly-recurring-todos.md](docs/weekly-recurring-todos.md) |
 | `PUT` | `/api/todos/{id}` | Úplná aktualizace úkolu |
 | `POST` | `/api/todos/{id}/complete` | Označení úkolu za dokončený |
 | `DELETE` | `/api/todos/{id}` | Smazání úkolu → `204 No Content` |
@@ -112,7 +113,7 @@ odpovědi s JSON schématem:
 | Kód | Význam | Schéma odpovědi | Kde |
 |---|---|---|---|
 | `200` / `201` / `204` | úspěch | `TodoItemDto`, seznam `TodoItemDto`, `InstanceInfoDto`, nebo bez těla u `204` | podle endpointu |
-| `400` | neplatný vstup (validace těla, nebo špatná hodnota filtru `isCompleted`) | `ValidationProblemDetails` | `POST`, `PUT`, `GET /api/todos` |
+| `400` | neplatný vstup (validace těla, nebo špatná hodnota filtru `isCompleted`) | `ValidationProblemDetails` | `POST`, `PUT`, `GET /api/todos`, `POST /api/todos/repeat` |
 | `404` | úkol se zadaným `id` neexistuje | `ProblemDetails` | endpointy s `{id}` |
 | `500` | neočekávaná chyba serveru | `ProblemDetails` | všechny endpointy |
 

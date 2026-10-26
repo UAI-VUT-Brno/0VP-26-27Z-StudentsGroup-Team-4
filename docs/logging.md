@@ -97,6 +97,7 @@ jinak `Success`.
 | 2002 | `RequestAborted` | Warning | Klient se odpojil dřív, než byl požadavek zpracován (`result` = `Cancelled`). | stejné jako 2000 |
 | 3000 | `TodoCreated` | Information | Byl vytvořen úkol. | `TodoId`, `Title` |
 | 3001 | `TodoDeleted` | Information | Úkol byl smazán. | `TodoId` |
+| 3002 | `WeeklyTodosCreated` | Information | A weekly sequence of tasks was created (`POST /api/todos/repeat`). | `Count`, `Title`, `FirstDueAtUtc`, `LastDueAtUtc` |
 
 `TraceId` je identifikátor požadavku z ASP.NET Core (odpovídá `HttpContext.TraceIdentifier`),
 `Route` je šablona trasy (`api/todos/{id:guid}`), takže jde agregovat podle endpointu

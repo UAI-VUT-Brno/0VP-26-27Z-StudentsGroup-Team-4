@@ -88,6 +88,17 @@ builder.Services.AddOpenApi(options =>
                 ["userId"] = "anna"
             };
         }
+        else if (type == typeof(CreateWeeklyTodoItemsRequest))
+        {
+            schema.Example = new JsonObject
+            {
+                ["title"] = "Weekly status report",
+                ["description"] = "Send the status report to the team.",
+                ["priority"] = "Normal",
+                ["firstDueAtUtc"] = "2026-11-02T09:00:00+00:00",
+                ["repeatCount"] = 3
+            };
+        }
         else if (type == typeof(TodoItemDto))
         {
             schema.Example = new JsonObject
@@ -99,7 +110,8 @@ builder.Services.AddOpenApi(options =>
                 ["isCompleted"] = false,
                 ["createdAtUtc"] = "2026-10-07T08:18:26+00:00",
                 ["completedAtUtc"] = null,
-                ["userId"] = "anna"
+                ["userId"] = "anna",
+                ["dueAtUtc"] = "2026-10-09T09:00:00+00:00"
             };
         }
 

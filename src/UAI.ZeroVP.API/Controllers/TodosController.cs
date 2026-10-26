@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Globalization;
+using Microsoft.AspNetCore.Mvc;
 using UAI.ZeroVP.API.Logging;
 using UAI.ZeroVP.API.Mapping;
 using UAI.ZeroVP.Data.Abstractions;
@@ -79,6 +80,46 @@ public sealed class TodosController : ControllerBase
         return CreatedAtRoute(nameof(GetById), new { id = created.Id }, created.ToDto());
     }
 
+    /// <summary>
+    /// Creates a weekly sequence of the same task: the first occurrence on <c>firstDueAtUtc</c>
+    /// plus <c>repeatCount</c> more, each exactly seven days after the previous one.
+    /// </summary>
+    /// <remarks>
+    /// The occurrences are ordinary, independent tasks - no recurrence rule is stored.
+    /// Updating, completing or deleting one occurrence does not change the others.
+    /// All occurrences are created together or not at all. Like all data, they are kept
+    /// in memory only and do not survive an application restart.
+    /// </remarks>
+    /// <response code="201">
+    /// The created occurrences in chronological order (<c>repeatCount</c> + 1 tasks).
+    /// There is no <c>Location</c> header because the result is a set of tasks, not one resource.
+    /// </response>
+    /// <response code="400">
+    /// The task fields, the first due date or the repeat count (1-52) did not pass validation.
+    /// No task is created.
+    /// </response>
+    [HttpPost("repeat")]
+    [ProducesResponseType(typeof(IReadOnlyList<TodoItemDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<TodoItemDto>>> CreateWeekly(
+        [FromBody] CreateWeeklyTodoItemsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var entities = request.ToEntities(_timeProvider.GetUtcNow());
+        var created = await _repository.AddRangeAsync(entities, cancellationToken);
+
+        _logger.LogInformation(
+            LogEvents.WeeklyTodosCreated,
+            "Created {Count} weekly occurrences of task '{Title}' (first due {FirstDueAtUtc}, last due {LastDueAtUtc}).",
+            created.Count,
+            created[0].Title,
+            FormatUtc(created[0].DueAtUtc),
+            FormatUtc(created[^1].DueAtUtc));
+
+        // StatusCode instead of CreatedAtRoute: there is no single resource to point a Location header at.
+        return StatusCode(StatusCodes.Status201Created, created.Select(item => item.ToDto()).ToList());
+    }
+
     /// <summary>Přepíše existující úkol novými hodnotami.</summary>
     /// <response code="200">Aktualizovaný úkol.</response>
     /// <response code="400">Vstupní data neprošla validací.</response>
@@ -143,6 +184,10 @@ public sealed class TodosController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>Formats a UTC instant for the log in a culture-independent ISO 8601 form.</summary>
+    private static string? FormatUtc(DateTimeOffset? value) =>
+        value?.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
     /// <summary>Jednotná odpověď 404 ve formátu ProblemDetails.</summary>
     private ObjectResult NotFoundTodo(Guid id) => Problem(

@@ -30,4 +30,7 @@ public sealed record TodoItemDto
 
     /// <summary>Identifikátor uživatele, kterému úkol patří, nebo <c>null</c>.</summary>
     public string? UserId { get; init; }
+
+    /// <summary>Due date and time (UTC), or <c>null</c> if the task has no due date.</summary>
+    public DateTimeOffset? DueAtUtc { get; init; }
 }
