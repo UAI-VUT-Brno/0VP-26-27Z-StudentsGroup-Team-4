@@ -30,8 +30,9 @@ public sealed class TodosController : ControllerBase
         _logger = logger;
     }
 
-    /// <summary>Vrátí seznam úkolů, volitelně filtrovaný podle stavu dokončení.</summary>
+    /// <summary>Vrátí seznam úkolů, volitelně filtrovaný podle stavu dokončení a uživatele.</summary>
     /// <param name="isCompleted">Filtr <c>true</c>/<c>false</c>; vynechání znamená bez filtru.</param>
+    /// <param name="userId">Identifikátor uživatele; vynechání znamená bez filtru.</param>
     /// <param name="cancellationToken">Token pro zrušení operace.</param>
     /// <response code="200">Seznam úkolů seřazený podle priority a data vzniku.</response>
     /// <response code="400">Hodnota parametru <c>isCompleted</c> není <c>true</c> ani <c>false</c>.</response>
@@ -40,9 +41,10 @@ public sealed class TodosController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IReadOnlyList<TodoItemDto>>> GetAll(
         [FromQuery] bool? isCompleted,
+        [FromQuery] string? userId,
         CancellationToken cancellationToken)
     {
-        var items = await _repository.GetAllAsync(isCompleted, cancellationToken);
+        var items = await _repository.GetAllAsync(isCompleted, userId, cancellationToken);
 
         return Ok(items.Select(item => item.ToDto()).ToList());
     }

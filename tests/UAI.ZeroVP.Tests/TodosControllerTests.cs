@@ -37,7 +37,7 @@ public class TodosControllerTests
     [Fact]
     public async Task GetAll_EmptyRepository_ReturnsOkWithEmptyList()
     {
-        var result = await CreateController().GetAll(null, CancellationToken.None);
+        var result = await CreateController().GetAll(null, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<TodoItemDto>>(ok.Value);

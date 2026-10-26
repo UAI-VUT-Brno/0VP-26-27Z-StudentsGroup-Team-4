@@ -38,12 +38,13 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<TodoItem>> GetAllAsync(bool? isCompleted = null, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TodoItem>> GetAllAsync(bool? isCompleted = null, string? userId = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         IReadOnlyList<TodoItem> result = _items.Values
             .Where(item => isCompleted is null || item.IsCompleted == isCompleted)
+            .Where(item => userId is null || string.Equals(item.UserId, userId, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(item => item.Priority)
             .ThenBy(item => item.CreatedAtUtc)
             // Occurrences of a weekly sequence are created in one call and share CreatedAtUtc;
@@ -161,13 +162,13 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     {
         var now = _timeProvider.GetUtcNow();
 
-        AddSeedItem("Připravit ukázkové API", "Tři projekty: DTO, Data, API.", TodoPriority.High, isCompleted: true, now.AddDays(-2));
-        AddSeedItem("Napsat Dockerfile", "Vícefázový build nad SDK a runtime image.", TodoPriority.High, isCompleted: false, now.AddDays(-1));
-        AddSeedItem("Vyzkoušet docker compose", "Spustit API ve dvou replikách.", TodoPriority.Normal, isCompleted: false, now.AddHours(-3));
-        AddSeedItem("Uklidit nepoužité image", "docker image prune", TodoPriority.Low, isCompleted: false, now.AddMinutes(-30));
+        AddSeedItem("Připravit ukázkové API", "Tři projekty: DTO, Data, API.", TodoPriority.High, isCompleted: true, now.AddDays(-2), userId: "anna");
+        AddSeedItem("Napsat Dockerfile", "Vícefázový build nad SDK a runtime image.", TodoPriority.High, isCompleted: false, now.AddDays(-1), userId: "anna");
+        AddSeedItem("Vyzkoušet docker compose", "Spustit API ve dvou replikách.", TodoPriority.Normal, isCompleted: false, now.AddHours(-3), userId: "petr");
+        AddSeedItem("Uklidit nepoužité image", "docker image prune", TodoPriority.Low, isCompleted: false, now.AddMinutes(-30), userId: "petr");
     }
 
-    private void AddSeedItem(string title, string description, TodoPriority priority, bool isCompleted, DateTimeOffset createdAtUtc)
+    private void AddSeedItem(string title, string description, TodoPriority priority, bool isCompleted, DateTimeOffset createdAtUtc, string? userId = null)
     {
         var item = new TodoItem
         {
@@ -178,7 +179,8 @@ public sealed class InMemoryTodoRepository : ITodoRepository
             IsCompleted = isCompleted,
             CreatedAtUtc = createdAtUtc,
             CompletedAtUtc = isCompleted ? createdAtUtc.AddHours(1) : null,
-            UpdatedAtUtc = createdAtUtc
+            UpdatedAtUtc = createdAtUtc,
+            UserId = userId
         };
 
         _items[item.Id] = item;

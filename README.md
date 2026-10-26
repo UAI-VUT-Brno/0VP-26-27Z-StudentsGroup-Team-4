@@ -60,7 +60,7 @@ API naslouchá na `http://localhost:5258`. Kořen `/` přesměruje na Swagger UI
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| `GET` | `/api/todos` | Seznam úkolů; volitelný filtr `?isCompleted=true\|false` |
+| `GET` | `/api/todos` | Seznam úkolů; volitelné filtry `?isCompleted=true\|false` a `?userId=anna` |
 | `GET` | `/api/todos/{id}` | Detail úkolu |
 | `POST` | `/api/todos` | Založení úkolu → `201 Created` + hlavička `Location` |
 | `POST` | `/api/todos/repeat` | Creates a weekly sequence of the same task (`repeatCount` + 1 tasks, seven days apart) → `201 Created` + list of tasks, see [docs/weekly-recurring-todos.md](docs/weekly-recurring-todos.md) |
@@ -121,6 +121,12 @@ Priorita úkolu se v požadavcích i odpovědích posílá jako řetězec
 (`Low`, `Normal`, `High`). Schémata mají ukázkové hodnoty, které Swagger UI
 předvyplní v **Example Value** a při **Try it out**.
 
+Úkol může mít volitelný `userId` (libovolný řetězec do 200 znaků, např. jméno nebo e-mail).
+Zatím slouží jen jako štítek a neověřuje se; počítá se s ním pro pozdější přihlašování.
+Filtr `?userId=` porovnává hodnotu bez ohledu na velikost písmen; prázdná hodnota
+`?userId=` nevrátí žádný úkol. U `PUT` se vynechané `userId` ignoruje a u úkolu
+zůstane původní hodnota; změní se jen tehdy, když klient pošle novou.
+
 Dokumentaci otevřete takto:
 
 1. Spusťte aplikaci: `dotnet run --project src/UAI.ZeroVP.API`.
@@ -136,8 +142,14 @@ curl http://localhost:5258/api/todos
 curl -X POST http://localhost:5258/api/todos \
   -H "Content-Type: application/json" \
   -d '{"title":"Napsat Dockerfile","priority":"High"}'
+curl "http://localhost:5258/api/todos?userId=anna"
+curl -X POST http://localhost:5258/api/todos -H "Content-Type: application/json" -d '{"title":"Úkol pro Annu","userId":"anna"}'
 curl http://localhost:5258/api/info
 ```
+
+## Bezpečnostní skenování
+
+Repozitář má automatickou bezpečnostní kontrolu (zranitelné balíčky, statická analýza, detekce secretů). Lokálně ji spustíš příkazem `powershell -ExecutionPolicy Bypass -File scripts/security-scan.ps1`, v GitHub Actions běží jako job `security-scan`. Podrobnosti jsou v [docs/ci-pipeline.md](docs/ci-pipeline.md).
 
 ## Poznámka ke kódování
 
