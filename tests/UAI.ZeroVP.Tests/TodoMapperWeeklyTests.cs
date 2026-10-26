@@ -208,4 +208,26 @@ public class TodoMapperWeeklyTests
 
         Assert.Throws<ArgumentNullException>(() => request.ToEntities(Now));
     }
+    [Fact]
+    public void ToEntities_CopiesTrimmedUserIdToEveryOccurrence()
+    {
+        var request = CreateRequest(3) with { UserId = "  anna  " };
+
+        var entities = request.ToEntities(Now);
+
+        Assert.All(entities, e => Assert.Equal("anna", e.UserId));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ToEntities_BlankUserId_IsStoredAsNull(string? userId)
+    {
+        var request = CreateRequest(2) with { UserId = userId };
+
+        var entities = request.ToEntities(Now);
+
+        Assert.All(entities, e => Assert.Null(e.UserId));
+    }
 }
