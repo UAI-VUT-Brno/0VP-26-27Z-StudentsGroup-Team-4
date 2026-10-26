@@ -120,7 +120,9 @@ public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>
         using var response = await _client.PostAsync(Url, Json(body));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        // TodosController is marked [Produces("application/json")], so the standard validation
+        // body is served as application/json (not application/problem+json).
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
 
         using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(400, problem.RootElement.GetProperty("status").GetInt32());
