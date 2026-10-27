@@ -27,6 +27,10 @@ WORKDIR /app
 EXPOSE 8080
 ENV ASPNETCORE_HTTP_PORTS=8080
 
+# Složka pro souborové logy musí existovat a patřit ne-rootovskému uživateli
+# (jinak do ní aplikace nemůže zapisovat). Vytváří se před přepnutím na USER.
+RUN mkdir -p /app/logs && chown $APP_UID /app/logs
+
 # Běh pod ne-rootovským uživatelem ($APP_UID = 1654)
 USER $APP_UID
 

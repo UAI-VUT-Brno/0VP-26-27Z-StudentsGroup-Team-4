@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: zerovp-api
     ports:
       - "5258:8080"
     environment:
