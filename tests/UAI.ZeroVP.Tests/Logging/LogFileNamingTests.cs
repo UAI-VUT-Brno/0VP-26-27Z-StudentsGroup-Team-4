@@ -1,4 +1,4 @@
-using UAI.ZeroVP.API.Logging;
+﻿using UAI.ZeroVP.API.Logging;
 
 namespace UAI.ZeroVP.Tests.Logging;
 

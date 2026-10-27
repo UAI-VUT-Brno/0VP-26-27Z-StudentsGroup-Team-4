@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using UAI.ZeroVP.API.Logging;
 
 namespace UAI.ZeroVP.Tests.Logging;
