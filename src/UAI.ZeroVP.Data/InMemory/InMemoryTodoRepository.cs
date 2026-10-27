@@ -1,35 +1,46 @@
 ﻿using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using UAI.ZeroVP.Data.Abstractions;
 using UAI.ZeroVP.Data.Entities;
+using UAI.ZeroVP.Data.Persistence;
 using UAI.ZeroVP.DTO;
 
 namespace UAI.ZeroVP.Data.InMemory;
 
 /// <summary>
-/// Úložiště úkolů v operační paměti procesu.
-/// <para>
-/// POZOR – klíčový bod pro výuku Dockeru: data žijí jen uvnitř běžícího procesu.
-/// Zastavením kontejneru (nebo jen restartem aplikace) se nenávratně ztratí
-/// a každá replika kontejneru má vlastní, na ostatních nezávislou sadu dat.
-/// </para>
-/// <para>
-/// <see cref="ConcurrentDictionary{TKey,TValue}"/> zajišťuje bezpečný souběžný přístup –
-/// webový server obsluhuje požadavky ve více vláknech současně.
-/// </para>
+/// Úložiště úkolů v operační paměti procesu s volitelnou persistencí do JSON souboru.
 /// </summary>
 public sealed class InMemoryTodoRepository : ITodoRepository
 {
     private readonly ConcurrentDictionary<Guid, TodoItem> _items = new();
     private readonly TimeProvider _timeProvider;
+    private readonly IFileStorage _fileStorage;
+    private readonly JsonPersistenceOptions _persistenceOptions;
+    private readonly ILogger<InMemoryTodoRepository> _logger;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     /// <summary>
-    /// Vytvoří úložiště a volitelně ho naplní ukázkovými daty.
+    /// Inicializuje instanci repozitáře.
     /// </summary>
-    /// <param name="options">Nastavení úložiště.</param>
-    /// <param name="timeProvider">Zdroj času – umožňuje čas podvrhnout v testech.</param>
-    public InMemoryTodoRepository(InMemoryTodoOptions? options = null, TimeProvider? timeProvider = null)
+    public InMemoryTodoRepository(
+        InMemoryTodoOptions? options = null,
+        TimeProvider? timeProvider = null,
+        IFileStorage? fileStorage = null,
+        JsonPersistenceOptions? persistenceOptions = null,
+        ILogger<InMemoryTodoRepository>? logger = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _fileStorage = fileStorage ?? new PhysicalFileStorage();
+        _persistenceOptions = persistenceOptions ?? new JsonPersistenceOptions { Enabled = false };
+        _logger = logger ?? NullLogger<InMemoryTodoRepository>.Instance;
 
         if (options?.SeedSampleData ?? true)
         {
@@ -47,8 +58,6 @@ public sealed class InMemoryTodoRepository : ITodoRepository
             .Where(item => userId is null || string.Equals(item.UserId, userId, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(item => item.Priority)
             .ThenBy(item => item.CreatedAtUtc)
-            // Occurrences of a weekly sequence are created in one call and share CreatedAtUtc;
-            // DueAtUtc keeps them in chronological order.
             .ThenBy(item => item.DueAtUtc)
             .Select(item => item.Clone())
             .ToList();
@@ -80,18 +89,11 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     }
 
     /// <inheritdoc />
-    /// <remarks>
-    /// All-or-nothing is implemented by undoing the already added items when one of them is rejected.
-    /// A concurrent reader may therefore briefly see part of a batch that is about to be rolled back;
-    /// for an in-memory store that is an accepted trade-off against locking every read.
-    /// </remarks>
     public Task<IReadOnlyList<TodoItem>> AddRangeAsync(IEnumerable<TodoItem> items, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(items);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Copy everything first: the stored items must not be shared with the caller,
-        // and a null item is rejected before anything is written.
         var toStore = items
             .Select(item => (item ?? throw new ArgumentException("The batch must not contain null items.", nameof(items))).Clone())
             .ToList();
@@ -101,7 +103,6 @@ public sealed class InMemoryTodoRepository : ITodoRepository
         {
             if (!_items.TryAdd(item.Id, item))
             {
-                // Remove by key AND value, so only the instances added by this call are undone.
                 foreach (var addedItem in added)
                 {
                     _items.TryRemove(new KeyValuePair<Guid, TodoItem>(addedItem.Id, addedItem));
@@ -126,10 +127,6 @@ public sealed class InMemoryTodoRepository : ITodoRepository
 
         var replacement = item.Clone();
 
-        // TryUpdate porovná uloženou instanci s tou, kterou jsme právě přečetli.
-        // Když ji mezitím vyměnilo jiné vlákno, porovnání selže a čte se znovu.
-        // Bez toho cyklu by souběžný zápis vrátil false, tedy 404 "úkol nenalezen",
-        // přestože úkol existuje. Vyhrává poslední zapisující.
         while (_items.TryGetValue(item.Id, out var existing))
         {
             if (_items.TryUpdate(item.Id, replacement, existing))
@@ -157,7 +154,85 @@ public sealed class InMemoryTodoRepository : ITodoRepository
         return Task.FromResult(_items.Count);
     }
 
-    /// <summary>Vloží ukázkové úkoly, aby API hned po startu nevracelo prázdný seznam.</summary>
+    /// <inheritdoc />
+    public async Task LoadAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_persistenceOptions.Enabled)
+        {
+            return;
+        }
+
+        var path = _persistenceOptions.FilePath;
+
+        if (!_fileStorage.FileExists(path))
+        {
+            _logger.LogInformation("Persistent task storage file '{FilePath}' was not found. Initializing with empty state.", path);
+            return;
+        }
+
+        try
+        {
+            var json = await _fileStorage.ReadAllTextAsync(path, cancellationToken);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                _logger.LogWarning("Persistent task storage file '{FilePath}' is empty. Initializing with empty state.", path);
+                _items.Clear();
+                return;
+            }
+
+            var loadedTasks = JsonSerializer.Deserialize<List<TodoItem>>(json, JsonOptions);
+            _items.Clear();
+
+            if (loadedTasks != null)
+            {
+                foreach (var task in loadedTasks)
+                {
+                    _items[task.Id] = task;
+                }
+            }
+
+            _logger.LogInformation("Successfully initialized {Count} task(s) from persistent storage '{FilePath}'.", _items.Count, path);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Persistent storage file '{FilePath}' contains corrupted JSON. Starting with an empty state.", path);
+            _items.Clear();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred while loading persistent storage file '{FilePath}'. Starting empty.", path);
+            _items.Clear();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task SaveAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_persistenceOptions.Enabled)
+        {
+            return;
+        }
+
+        var path = _persistenceOptions.FilePath;
+
+        try
+        {
+            var taskList = _items.Values
+                .OrderBy(i => i.CreatedAtUtc)
+                .ToList();
+
+            var json = JsonSerializer.Serialize(taskList, JsonOptions);
+            await _fileStorage.WriteAllTextAsync(path, json, cancellationToken);
+
+            _logger.LogInformation("Successfully saved {Count} task(s) to persistent storage '{FilePath}'.", taskList.Count, path);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save tasks to persistent storage file '{FilePath}'.", path);
+            throw;
+        }
+    }
+
     private void Seed()
     {
         var now = _timeProvider.GetUtcNow();
