@@ -24,4 +24,16 @@ public sealed record InstanceInfoDto
 
     /// <summary>Počet úkolů, které má tato instance právě v paměti.</summary>
     public required int TodoCount { get; init; }
+
+    /// <summary>
+    /// Identifikátor instance. Zadává se konfigurací (<c>Instance__Id</c>); jinak je odvozen
+    /// ze jména stroje a portu, např. <c>PC-5258</c>. Odlišuje souběžně běžící instance.
+    /// </summary>
+    public required string InstanceId { get; init; }
+
+    /// <summary>Adresy, na kterých instance naslouchá (např. <c>http://localhost:5258</c>).</summary>
+    public required IReadOnlyList<string> Urls { get; init; }
+
+    /// <summary>Port první adresy z <see cref="Urls"/>; <c>null</c>, pokud ho nelze určit.</summary>
+    public int? Port { get; init; }
 }
