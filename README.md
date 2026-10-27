@@ -174,6 +174,18 @@ Materiály case studies jsou psané **anglicky**; samotná aplikace a tento soub
 Každá case study končí příkladem s Docker Compose. Všechny tři jsou samostatné –
 lze je probírat v libovolném pořadí nebo jen některý.
 
+## Spuštění v Dockeru (Docker Compose)
+
+API lze spustit v izolovaném Docker kontejneru pomocí Docker Compose.
+
+> **Známé omezení.** Aplikace zatím používá in-memory úložiště. Data vytvořená v kontejneru se při jeho restartu nebo zastavení ztratí. Persistentní úložiště bude doplněno v navazujícím issue.
+
+### Příkazy pro správy kontejneru
+
+1. **Sestavení a spuštění kontejneru na pozadí:**
+   ```bash
+   docker compose up --build -d
+
 ### Společné pro všechny case studies
 
 Sestavuje se vždy **z kořene projektu**, Dockerfile se uvádí přepínačem `-f`:
