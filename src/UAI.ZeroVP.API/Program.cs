@@ -1,52 +1,53 @@
 ﻿using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi;
+using UAI.ZeroVP.API.HostedServices;
 using UAI.ZeroVP.API.Logging;
 using UAI.ZeroVP.Data.DependencyInjection;
 using UAI.ZeroVP.Data.InMemory;
+using UAI.ZeroVP.Data.Persistence;
 using UAI.ZeroVP.DTO;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Logování -------------------------------------------------------------
-
-// Persistentní log do souboru (JSON Lines), logování požadavků a životního cyklu.
-// Nastavení je v sekcích FileLogging a RequestLogging; popis v docs/logging.md.
 builder.AddApplicationLogging();
 
 // --- Služby ---------------------------------------------------------------
-
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Výčty posílá API jako řetězce ("High"), ne jako čísla – čitelnější v curl i ve Swaggeru.
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-// Generátor OpenAPI nečte nastavení kontrolerů výše, ale vlastní JSON nastavení
-// (ConfigureHttpJsonOptions). Bez tohoto řádku by Swagger popisoval priority jako čísla.
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
-// Jednotné chybové odpovědi ve formátu ProblemDetails (RFC 9457).
 builder.Services.AddProblemDetails();
-
-// Zdroj času jako služba – kontrolery i repozitář si ho berou z DI.
 builder.Services.AddSingleton(TimeProvider.System);
 
-// Datová vrstva: paměťové úložiště. Nastavení se čte ze sekce "Todo",
-// v kontejneru ho lze přepsat proměnnou prostředí Todo__SeedSampleData.
-builder.Services.AddInMemoryTodoData(options =>
-    builder.Configuration.GetSection(InMemoryTodoOptions.SectionName).Bind(options));
+// Datová vrstva: paměťové úložiště s JSON persistencí
+builder.Services.AddInMemoryTodoData(
+    configureTodo: options =>
+        builder.Configuration.GetSection(InMemoryTodoOptions.SectionName).Bind(options),
+    configurePersistence: options =>
+    {
+        builder.Configuration.GetSection(JsonPersistenceOptions.SectionName).Bind(options);
 
-// Kontrola zdraví aplikace – později ji využije HEALTHCHECK v Dockerfile.
+        // Při spuštění pod test runnerem (WebApplicationFactory) persistenci na disk vypneme,
+        // aby integrační testy API zůstaly plně izolované a nezanechávaly znečištěný soubor na disku.
+        if (AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith("testhost", StringComparison.OrdinalIgnoreCase) == true))
+        {
+            options.Enabled = false;
+        }
+    });
+
+builder.Services.AddHostedService<TodoPersistenceHostedService>();
+
 builder.Services.AddHealthChecks();
 
-// Popis API ve formátu OpenAPI. Dokument generuje vestavěná knihovna .NET 10
-// (Microsoft.AspNetCore.OpenApi) a vystavuje ho na /openapi/v1.json.
-// Swagger UI je pak jen prohlížeč tohoto dokumentu – žádný druhý generátor.
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, cancellationToken) =>
@@ -55,14 +56,13 @@ builder.Services.AddOpenApi(options =>
         {
             Title = "UAI.ZeroVP – ToDo API",
             Version = "v1",
-            Description = "Ukázkové API pro výuku Dockeru. Data jsou uložena pouze "
-                        + "v paměti procesu a po zastavení kontejneru se ztratí."
+            Description = "Ukázkové API s persistencí do souboru JSON."
         };
 
         return Task.CompletedTask;
     });
 
-    // Ukázkové hodnoty, které Swagger UI předvyplní v "Example Value" a při "Try it out".
+#pragma warning disable CS0618
     options.AddSchemaTransformer((schema, context, cancellationToken) =>
     {
         var type = context.JsonTypeInfo.Type;
@@ -117,31 +117,20 @@ builder.Services.AddOpenApi(options =>
 
         return Task.CompletedTask;
     });
+#pragma warning restore CS0618
 });
 
 var app = builder.Build();
 
-// Swagger UI je ve vývoji zapnutý; v kontejneru (prostředí Production) se dá
-// zapnout proměnnou prostředí Swagger__Enabled=true.
 var swaggerEnabled = app.Configuration.GetValue("Swagger:Enabled", app.Environment.IsDevelopment());
 
-// --- HTTP pipeline --------------------------------------------------------
-
-// Bez přesměrování na HTTPS: v kontejneru se vystavuje pouze HTTP port
-// a TLS řeší až reverzní proxy před ním.
 app.UseExceptionHandler();
-
-// Za UseExceptionHandler: vidí neošetřené výjimky dřív, než se změní na odpověď 500.
 app.UseRequestLogging();
-
 app.UseStatusCodePages();
 
 if (swaggerEnabled)
 {
-    // Strojově čitelný popis API.
     app.MapOpenApi();
-
-    // Interaktivní dokumentace nad tímto popisem – http://localhost:5258/swagger
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/openapi/v1.json", "UAI.ZeroVP – ToDo API v1");
@@ -153,15 +142,9 @@ if (swaggerEnabled)
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-// Kořen vede na Swagger, ať má "docker run" hned co ukázat.
-// Když je Swagger vypnutý, přesměruje rovnou na seznam úkolů.
 app.MapGet("/", () => Results.Redirect(swaggerEnabled ? "/swagger" : "/api/todos"))
    .ExcludeFromDescription();
 
-// --- Spuštění a zastavení -------------------------------------------------
-
-// Místo app.Run() se start a stop řídí ručně, aby se zalogovala i chyba při startu
-// (např. obsazený port) a aby se před koncem procesu vyprázdnila fronta souborového logu.
 var lifecycle = app.Services.GetRequiredService<ApplicationLifecycleLogger>();
 lifecycle.LogStarting();
 
@@ -170,7 +153,7 @@ var exitCode = 0;
 try
 {
     await app.StartAsync();
-    await app.WaitForShutdownAsync(); // vrátí se po Ctrl+C / SIGTERM a po zastavení hostitele
+    await app.WaitForShutdownAsync();
 }
 catch (Exception exception)
 {
@@ -178,7 +161,6 @@ catch (Exception exception)
     exitCode = 1;
 }
 
-// Dispose zavře poskytovatele logu, který zapíše zbytek fronty (včetně ApplicationStopped).
 await app.DisposeAsync();
 
 return exitCode;
