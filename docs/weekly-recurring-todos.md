@@ -26,10 +26,11 @@ tasks: the first one and three more.
 | `title` | string | yes | 1-200 characters; leading and trailing spaces are trimmed |
 | `description` | string | no | at most 1000 characters; a blank value is stored as `null` |
 | `priority` | string | no | `Low`, `Normal` (default) or `High` |
+| `userId` | string | no | owner of the tasks, at most 200 characters; trimmed, a blank value is stored as `null` |
 | `firstDueAtUtc` | date-time | yes | due date and time of the first occurrence, ISO 8601 in UTC |
 | `repeatCount` | integer | yes | number of **additional** weekly repetitions, 1-52 |
 
-`title`, `description` and `priority` are copied to every occurrence.
+`title`, `description`, `priority` and `userId` are copied to every occurrence.
 
 ## Response
 

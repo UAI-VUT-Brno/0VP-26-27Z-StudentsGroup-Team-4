@@ -64,6 +64,7 @@ public static class TodoMapper
 
         var title = request.Title.Trim();
         var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        var userId = string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId.Trim();
 
         var occurrences = new List<TodoItem>(request.RepeatCount + 1);
         for (var index = 0; index <= request.RepeatCount; index++)
@@ -78,7 +79,8 @@ public static class TodoMapper
                 CreatedAtUtc = nowUtc,
                 CompletedAtUtc = null,
                 DueAtUtc = firstDueAtUtc.AddDays(CreateWeeklyTodoItemsRequest.DaysBetweenOccurrences * index),
-                UpdatedAtUtc = nowUtc
+                UpdatedAtUtc = nowUtc,
+                UserId = userId
             });
         }
 
