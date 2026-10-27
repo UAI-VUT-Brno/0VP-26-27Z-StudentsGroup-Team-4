@@ -21,6 +21,13 @@ public sealed class FileLoggingOptions
     /// <summary>Začátek názvu souboru; výsledný název je <c>{prefix}-yyyyMMdd.log</c> (datum v UTC).</summary>
     public string FileNamePrefix { get; set; } = "zerovp";
 
+    /// <summary>
+    /// Vloží ID instance (<c>Instance:Id</c>) do názvu souboru: <c>{prefix}-{instanceId}-yyyyMMdd.log</c>.
+    /// Zapněte při souběžném běhu více instancí, aby každá psala do vlastního souboru.
+    /// Výchozí <c>false</c> = původní název bez ID instance. Skript <c>scripts/run-instances</c> to zapíná sám.
+    /// </summary>
+    public bool IncludeInstanceId { get; set; }
+
     /// <summary>Kolik nejnovějších denních souborů se ponechá; starší se smažou. Hodnota 0 = nemazat nic.</summary>
     public int RetainedFileCount { get; set; } = 14;
 
