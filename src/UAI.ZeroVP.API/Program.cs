@@ -1,12 +1,19 @@
 ﻿using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi;
+using UAI.ZeroVP.API.Instances;
 using UAI.ZeroVP.API.Logging;
 using UAI.ZeroVP.Data.DependencyInjection;
 using UAI.ZeroVP.Data.InMemory;
 using UAI.ZeroVP.DTO;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// --- Identita instance ----------------------------------------------------
+
+// ID instance (Instance__Id) a adresa se čtou z konfigurace: port určuje ASPNETCORE_URLS / --urls,
+// takže vedle sebe může běžet víc instancí. Vystavuje je GET /api/info; popis v README.
+builder.Services.AddInstanceIdentity();
 
 // --- Logování -------------------------------------------------------------
 

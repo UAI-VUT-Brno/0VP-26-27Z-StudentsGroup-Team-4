@@ -21,6 +21,10 @@ indent_size = 2
 [*.{csproj,props,targets}]
 indent_size = 2
 
+# Shell skripty se spouští v Linuxu / macOS / Git Bash; CRLF by shell rozbil.
+[*.sh]
+end_of_line = lf
+
 # Docker a nginx čtou tyto soubory po řádcích; LF a žádný BOM.
 [{Dockerfile,Dockerfile.*,*.dockerignore,.dockerignore,compose.yaml,compose.*.yaml,*.conf,*.env}]
 charset = utf-8

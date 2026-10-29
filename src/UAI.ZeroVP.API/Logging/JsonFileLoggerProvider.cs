@@ -23,6 +23,7 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
 {
     private readonly FileLoggingOptions _options;
     private readonly string _directory;
+    private readonly string _filePrefix;
     private readonly TimeProvider _timeProvider;
     private readonly Channel<string> _queue;
     private readonly Task _writerTask;
@@ -32,10 +33,18 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
     /// <param name="options">Nastavení souborového logu.</param>
     /// <param name="contentRootPath">Základ pro relativní cestu ke složce s logy.</param>
     /// <param name="timeProvider">Zdroj času; výchozí je systémový.</param>
-    public JsonFileLoggerProvider(FileLoggingOptions options, string contentRootPath, TimeProvider? timeProvider = null)
+    /// <param name="instanceId">
+    /// ID instance. Do názvu souboru se promítne jen při <see cref="FileLoggingOptions.IncludeInstanceId"/>.
+    /// </param>
+    public JsonFileLoggerProvider(
+        FileLoggingOptions options,
+        string contentRootPath,
+        TimeProvider? timeProvider = null,
+        string? instanceId = null)
     {
         _options = options;
         _directory = Path.GetFullPath(options.Directory, contentRootPath);
+        _filePrefix = LogFileNaming.BuildPrefix(options.FileNamePrefix, instanceId, options.IncludeInstanceId);
         _timeProvider = timeProvider ?? TimeProvider.System;
 
         _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(Math.Max(1, options.QueueCapacity))
@@ -123,9 +132,7 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
 
     private string GetFilePath()
     {
-        var day = _timeProvider.GetUtcNow().ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-
-        return Path.Combine(_directory, $"{_options.FileNamePrefix}-{day}.log");
+        return Path.Combine(_directory, LogFileNaming.BuildFileName(_filePrefix, _timeProvider.GetUtcNow()));
     }
 
     private StreamWriter OpenWriter(string path)
@@ -151,8 +158,11 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
         try
         {
             // Název obsahuje datum ve tvaru yyyyMMdd, takže abecední řazení = chronologické.
+            // Filtr podle přesného tvaru zaručí, že instance nesmaže logy jiné instance
+            // (maska "zerovp-api-*.log" by chytila i "zerovp-api-2-20261007.log").
             var obsolete = new DirectoryInfo(_directory)
-                .GetFiles($"{_options.FileNamePrefix}-*.log")
+                .GetFiles($"{_filePrefix}-*.log")
+                .Where(file => LogFileNaming.IsLogFileName(file.Name, _filePrefix))
                 .OrderByDescending(file => file.Name, StringComparer.Ordinal)
                 .Skip(_options.RetainedFileCount);
 

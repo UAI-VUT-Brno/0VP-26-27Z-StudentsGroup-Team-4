@@ -10,7 +10,7 @@ chyba – popis chyby.
 |---|---|
 | **Metoda** | Standardní `Microsoft.Extensions.Logging` (`ILogger`) + vlastní poskytovatel `JsonFileLoggerProvider`. Žádný další NuGet balíček. |
 | **Formát** | JSON Lines – jeden záznam = jeden řádek JSON, kódování UTF-8 bez BOM, konec řádku `\n`. |
-| **Úložiště** | Soubory ve složce `logs/` (relativně ke kořeni aplikace), jeden soubor na den: `zerovp-yyyyMMdd.log` (datum v UTC). |
+| **Úložiště** | Soubory ve složce `logs/` (relativně ke kořeni aplikace), jeden soubor na den: `zerovp-yyyyMMdd.log` (datum v UTC). Při `FileLogging__IncludeInstanceId=true` je v názvu i ID instance: `zerovp-{instanceId}-yyyyMMdd.log`. |
 | **Retence** | Ponechá se 14 nejnovějších souborů, starší se při přepnutí na nový den smažou. |
 | **Konzole** | Zůstává zapnutá beze změny (`docker logs` funguje dál). |
 
@@ -46,6 +46,7 @@ V `appsettings.json` (nebo proměnnou prostředí, dvojité podtržítko = oddě
   "Enabled": true,          // FileLogging__Enabled=false vypne zápis do souboru
   "Directory": "logs",      // relativní (ke kořeni aplikace) nebo absolutní cesta
   "FileNamePrefix": "zerovp",
+  "IncludeInstanceId": false, // true = do názvu souboru přidá ID instance (Instance:Id), viz níže
   "RetainedFileCount": 14   // 0 = nemazat staré soubory
 },
 "RequestLogging": {
@@ -61,6 +62,21 @@ V `appsettings.json` (nebo proměnnou prostředí, dvojité podtržítko = oddě
 Minimální úroveň zapisovaná do souboru se řídí sekcí `Logging:JsonFile:LogLevel`
 (nezávisle na konzoli). Hlášení frameworku (`Microsoft.*`) se do souboru dostanou až od
 úrovně `Warning`, aby se neduplikovaly vlastní události životního cyklu.
+
+### Více instancí na jednom stroji
+
+Instance spuštěné vedle sebe se stejnou složkou `logs/` by psaly do téhož souboru a jejich záznamy by se
+prolínaly. Proto existuje volba `FileLogging:IncludeInstanceId` (proměnná `FileLogging__IncludeInstanceId`):
+
+| Hodnota | Název souboru |
+|---|---|
+| `false` (výchozí) | `zerovp-20261007.log` – beze změny, vhodné pro jednu instanci |
+| `true` | `zerovp-api-1-20261007.log` – `api-1` je ID instance (`Instance__Id`; když není zadané, `{MachineName}-{port}`) |
+
+Znaky mimo `A–Z a–z 0–9 . _ -` se v ID instance v názvu souboru nahradí `_`, ID se zkrátí na 80 znaků.
+Retence maže jen soubory se stejným prefixem **vlastní instance** (`zerovp-api-*` nesmaže `zerovp-api-2-*`).
+Skripty `scripts/run-instances.ps1` a `.sh` volbu zapínají samy; postup je v README v sekci
+„Více instancí na localhostu“.
 
 ## Struktura záznamu
 
@@ -188,6 +204,7 @@ dotnet test tests/UAI.ZeroVP.Tests
 |---|---|
 | `JsonFileLoggerProviderTests` | povinná pole záznamu, UTC čas, čitelná diakritika, odvození `result`, výjimka v `error`/`exception`, nemožnost podvrhnout řádek logu, zachování pořadí, souběžný zápis z více vláken, nový soubor po půlnoci, retence, odolnost vůči nezapisovatelné složce |
 | `RequestLoggingMiddlewareTests` | úspěch / 4xx / 5xx, výjimka (zalogována a znovu vyhozena), odpojení klienta, `Route`, vynechané cesty, query string se nelogují |
+| `LogFileNamingTests`, `JsonFileLoggerProviderInstanceTests` | název souboru s ID instance a bez něj, ošetření nevhodných znaků, dvě instance = dva soubory, retence nesmaže soubory jiné instance |
 | `ApplicationLifecycleLoggingTests` | skutečný server: `ApplicationStarting` → `Started` → požadavky → `Stopping` → `Stopped` se zapíšou do souboru; selhání startu = `ApplicationFailed` |
 
 ## Omezení
@@ -196,5 +213,6 @@ dotnet test tests/UAI.ZeroVP.Tests
   `ApplicationStopping`/`ApplicationStopped` nezapíšou – aplikace o ukončení nemá šanci vědět.
   Po neukončeném `ApplicationStarting` bez navazujícího `ApplicationStopped` poznáte, že běh skončil nečistě.
 - Více replik zapisujících do **téhož** souboru (sdílený svazek) se v zápisu prolíná; každá replika
-  by měla mít vlastní složku nebo se má logovat na `stdout` a sbírat Dockerem.
+  by měla mít vlastní složku, vlastní název souboru (`FileLogging__IncludeInstanceId=true`
+  + `Instance__Id`), nebo se má logovat na `stdout` a sbírat Dockerem.
 - Při přeplnění fronty (výchozí 10 000 záznamů, tj. disk stojí) se nejnovější záznamy zahazují.

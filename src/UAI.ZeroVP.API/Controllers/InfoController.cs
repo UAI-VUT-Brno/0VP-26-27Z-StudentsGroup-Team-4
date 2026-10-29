@@ -1,14 +1,16 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc;
+using UAI.ZeroVP.API.Instances;
 using UAI.ZeroVP.Data.Abstractions;
 using UAI.ZeroVP.DTO;
 
 namespace UAI.ZeroVP.API.Controllers;
 
 /// <summary>
-/// Diagnostický endpoint. Ve výuce Dockeru ukazuje, která instance
-/// (kontejner) požadavek obsloužila a kolik dat má právě ve své paměti.
+/// Diagnostický endpoint. Ukazuje, která instance (kontejner, nebo proces na localhostu)
+/// požadavek obsloužila – její ID a adresu – a kolik dat má právě ve své paměti.
 /// </summary>
 [ApiController]
 [Route("api/info")]
@@ -19,17 +21,26 @@ public sealed class InfoController : ControllerBase
     private readonly ITodoRepository _repository;
     private readonly IHostEnvironment _environment;
     private readonly TimeProvider _timeProvider;
+    private readonly InstanceIdentity _instance;
+    private readonly IServer _server;
 
     /// <summary>Vytvoří kontroler se závislostmi z DI kontejneru.</summary>
-    public InfoController(ITodoRepository repository, IHostEnvironment environment, TimeProvider timeProvider)
+    public InfoController(
+        ITodoRepository repository,
+        IHostEnvironment environment,
+        TimeProvider timeProvider,
+        InstanceIdentity instance,
+        IServer server)
     {
         _repository = repository;
         _environment = environment;
         _timeProvider = timeProvider;
+        _instance = instance;
+        _server = server;
     }
 
     /// <summary>Vrátí informace o běžící instanci API.</summary>
-    /// <response code="200">Popis instance včetně počtu úkolů v paměti.</response>
+    /// <response code="200">Popis instance: ID, adresa a port, prostředí, doba běhu, počet úkolů v paměti.</response>
     [HttpGet]
     [ProducesResponseType(typeof(InstanceInfoDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<InstanceInfoDto>> Get(CancellationToken cancellationToken)
@@ -42,6 +53,8 @@ public sealed class InfoController : ControllerBase
         // podržel nativní handle procesu až do příštího sběru odpadků.
         using var process = Process.GetCurrentProcess();
 
+        var urls = _instance.GetListeningUrls(_server);
+
         return Ok(new InstanceInfoDto
         {
             MachineName = Environment.MachineName,
@@ -49,7 +62,10 @@ public sealed class InfoController : ControllerBase
             Version = version,
             UtcNow = _timeProvider.GetUtcNow(),
             Uptime = _timeProvider.GetUtcNow() - process.StartTime.ToUniversalTime(),
-            TodoCount = await _repository.CountAsync(cancellationToken)
+            TodoCount = await _repository.CountAsync(cancellationToken),
+            InstanceId = _instance.Id,
+            Urls = urls,
+            Port = InstanceIdentity.TryGetPort(urls.FirstOrDefault())
         });
     }
 }
