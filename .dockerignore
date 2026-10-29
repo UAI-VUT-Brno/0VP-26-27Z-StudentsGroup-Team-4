@@ -1,0 +1,29 @@
+# Sestavené binárky a dočasné složky
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# Verzování a CI
+.git/
+.gitignore
+.github/
+
+# Logy a lokální data
+**/logs/
+*.log
+
+# IDE a konfigurace editoru
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Testy, skripty a dokumentace nepotřebné pro build
+tests/
+docs/
+scripts/
+case-study-*/
+*.md
+*.zip
