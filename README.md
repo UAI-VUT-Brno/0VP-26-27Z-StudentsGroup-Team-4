@@ -69,8 +69,8 @@ Port žádná část kódu nepředepisuje – určuje ho konfigurace (viz [Více
 | `PUT` | `/api/todos/{id}` | Úplná aktualizace úkolu |
 | `POST` | `/api/todos/{id}/complete` | Označení úkolu za dokončený |
 | `DELETE` | `/api/todos/{id}` | Smazání úkolu → `204 No Content` |
-| `GET` | `/api/info` | Identita instance (`instanceId`, `urls`, `port`), hostname, prostředí, doba běhu, počet úkolů v paměti |
-| `GET` | `/health` | Kontrola zdraví – použije ji `HEALTHCHECK` v Dockerfile |
+| `GET` | `/api/info` | Hostname instance, prostředí, doba běhu, počet úkolů v paměti |
+| `GET` | `/health` | Kontrola zdraví – použije ji `healthcheck` v docker-compose.yml |
 | `GET` | `/swagger` | Interaktivní dokumentace Swagger UI |
 | `GET` | `/openapi/v1.json` | Popis API ve formátu OpenAPI |
 
@@ -270,3 +270,59 @@ docker build -f case-study-a-dockerfile/02-multi-stage-build/Dockerfile -t zerov
 Ignorovací soubory jsou uložené vedle jednotlivých Dockerfile jako
 `<jméno Dockerfile>.dockerignore`, protože všechny příklady sdílejí jeden kontext.
 V běžném projektu patří `.dockerignore` do kořene repozitáře.
+
+## Spuštění v Dockeru (Docker Compose)
+
+API lze spustit v izolovaném Docker kontejneru pomocí Docker Compose. Soubory
+`Dockerfile`, `.dockerignore` a `docker-compose.yml` jsou v kořeni repozitáře.
+
+> **Známé omezení.** Aplikace zatím používá in-memory úložiště. Data vytvořená
+> v kontejneru se při jeho restartu nebo zastavení ztratí. Persistentní úložiště
+> bude doplněno v navazujícím issue.
+
+Kontejner je jen jedna instance API. GitHub Actions kontejnery nesestavují ani
+netestují, CI běží bez Dockeru.
+
+### Příkazy
+
+```bash
+# sestavení image a spuštění na pozadí
+docker compose up --build -d
+
+# stav kontejneru (po startu by měl být "healthy")
+docker compose ps
+
+# logy aplikace (sledování průběhu: -f)
+docker compose logs api
+docker compose logs -f api
+
+# zastavení a odstranění kontejneru
+docker compose down
+```
+
+Po restartu kontejneru (`docker compose restart`) i po `docker compose down` se
+data v paměti ztratí a znovu se vloží ukázkové úkoly.
+
+### Kontrola, že kontejner běží
+
+```bash
+curl http://localhost:5258/health
+curl http://localhost:5258/api/info
+```
+
+Swagger UI je na `http://localhost:5258/swagger`.
+
+### Konfigurace
+
+Nastavení se předává výhradně proměnnými prostředí v `docker-compose.yml`:
+
+| Proměnná | Význam |
+|---|---|
+| `ASPNETCORE_ENVIRONMENT` | prostředí ASP.NET Core |
+| `Swagger__Enabled` | zapnutí Swagger UI |
+| `Todo__SeedSampleData` | vložení ukázkových úkolů při startu |
+| `FileLogging__Directory` | složka souborových logů v kontejneru (`/app/logs`) |
+
+Aplikace v kontejneru běží pod uživatelem bez práv roota a naslouchá na portu
+`8080`, který je na hostiteli dostupný jako `5258`. Kontrola zdraví volá `/health`
+z malého pomocného nástroje v image (runtime image nemá `curl`).
