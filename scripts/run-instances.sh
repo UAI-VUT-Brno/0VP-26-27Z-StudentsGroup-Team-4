@@ -3,13 +3,15 @@
 # Starts N local instances of the API on consecutive ports (BASE_PORT, BASE_PORT+1, ...).
 #
 # Every instance gets its own port, instance id (<ID_PREFIX>-<n>) and log file
-# (zerovp-<id>-yyyyMMdd.log). Press Ctrl+C to stop all of them.
-# Data is NOT shared between instances yet (in-memory storage per process);
-# see the README section "Vice instanci na localhostu".
+# (zerovp-<id>-yyyyMMdd.log). All instances use ONE shared JSON storage file
+# (JsonPersistence__Shared=true), so a task created through one instance is visible through
+# every other. Press Ctrl+C to stop all of them.
+# See the README section "Vice instanci na localhostu".
 #
 # Usage:   scripts/run-instances.sh [COUNT] [BASE_PORT]
 # Env:     ID_PREFIX (default api), ASPNETCORE_ENVIRONMENT (default Development),
-#          CONFIGURATION (Release|Debug, default Release), NO_BUILD=1 (skip the build)
+#          CONFIGURATION (Release|Debug, default Release), NO_BUILD=1 (skip the build),
+#          DATA_FILE (shared JSON file, default <repo>/data/todos.json)
 # Example: bash scripts/run-instances.sh 3 5258
 
 set -euo pipefail
@@ -39,6 +41,7 @@ fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_DIR="$ROOT/src/UAI.ZeroVP.API"
 DLL="$PROJECT_DIR/bin/$CONFIGURATION/net10.0/UAI.ZeroVP.API.dll"
+DATA_FILE="${DATA_FILE:-$ROOT/data/todos.json}"
 
 # Fail early with a clear message instead of a crashing instance.
 for ((i = 0; i < COUNT; i++)); do
@@ -80,6 +83,9 @@ for ((i = 1; i <= COUNT; i++)); do
   ASPNETCORE_ENVIRONMENT="$ENVIRONMENT_NAME" \
   Instance__Id="$id" \
   FileLogging__IncludeInstanceId=true \
+  JsonPersistence__Enabled=true \
+  JsonPersistence__Shared=true \
+  JsonPersistence__FilePath="$DATA_FILE" \
     dotnet "$DLL" --urls "http://localhost:$port" --contentRoot "$PROJECT_DIR" &
   pids+=("$!")
 
@@ -87,6 +93,7 @@ for ((i = 1; i <= COUNT; i++)); do
 done
 
 echo
+echo "Shared storage: $DATA_FILE"
 echo "Started $COUNT instance(s). Check them with:  curl http://localhost:$BASE_PORT/api/info"
 echo "Press Ctrl+C to stop all instances."
 

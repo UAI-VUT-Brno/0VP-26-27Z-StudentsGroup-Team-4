@@ -6,8 +6,10 @@
     - its own port         (--urls http://localhost:<port>)
     - its own instance id  (Instance__Id = <IdPrefix>-<n>)
     - its own log file     (FileLogging__IncludeInstanceId = true -> zerovp-<id>-yyyyMMdd.log)
-  Press Ctrl+C to stop all instances. Data is NOT shared between instances yet
-  (in-memory storage per process); see the README section "Vice instanci na localhostu".
+    - ONE shared storage   (JsonPersistence__Shared = true, JsonPersistence__FilePath = <DataFile>)
+  All instances read and write the same JSON file, so a task created through one instance is
+  visible through every other. Press Ctrl+C to stop all instances.
+  See the README section "Vice instanci na localhostu".
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts/run-instances.ps1 -Count 3
 .EXAMPLE
@@ -34,6 +36,9 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
 
+    # JSON file shared by all instances (absolute path; default <repo>/data/todos.json).
+    [string]$DataFile = '',
+
     # Skip the build and use the existing binaries.
     [switch]$NoBuild
 )
@@ -45,6 +50,9 @@ $projectDir = Join-Path $root 'src/UAI.ZeroVP.API'
 $project = Join-Path $projectDir 'UAI.ZeroVP.API.csproj'
 $dll = Join-Path $projectDir "bin/$Configuration/net10.0/UAI.ZeroVP.API.dll"
 $lastPort = $BasePort + $Count - 1
+
+if (-not $DataFile) { $DataFile = Join-Path $root 'data/todos.json' }
+$DataFile = [System.IO.Path]::GetFullPath($DataFile)
 
 if ($lastPort -gt 65535) {
     throw "Ports $BasePort..$lastPort are out of range (max 65535). Lower -Count or -BasePort."
@@ -86,6 +94,9 @@ $saved = @{
     ASPNETCORE_ENVIRONMENT      = $env:ASPNETCORE_ENVIRONMENT
     Instance__Id                = $env:Instance__Id
     FileLogging__IncludeInstanceId = $env:FileLogging__IncludeInstanceId
+    JsonPersistence__Enabled    = $env:JsonPersistence__Enabled
+    JsonPersistence__Shared     = $env:JsonPersistence__Shared
+    JsonPersistence__FilePath   = $env:JsonPersistence__FilePath
 }
 
 $processes = @()
@@ -99,6 +110,9 @@ try {
         $env:ASPNETCORE_ENVIRONMENT = $EnvironmentName
         $env:Instance__Id = $id
         $env:FileLogging__IncludeInstanceId = 'true'
+        $env:JsonPersistence__Enabled = 'true'
+        $env:JsonPersistence__Shared = 'true'
+        $env:JsonPersistence__FilePath = $DataFile
 
         # --contentRoot: appsettings.json and the logs/ folder are taken from the project folder,
         # exactly like with "dotnet run".
@@ -110,6 +124,7 @@ try {
     }
 
     Write-Host ''
+    Write-Host "Shared storage: $DataFile"
     Write-Host "Started $Count instance(s). Check them with:  curl http://localhost:$BasePort/api/info"
     Write-Host 'Press Ctrl+C to stop all instances.'
 
