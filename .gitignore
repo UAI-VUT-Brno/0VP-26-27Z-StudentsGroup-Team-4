@@ -1,4 +1,4 @@
-## Výstupy buildu
+﻿## Výstupy buildu
 bin/
 obj/
 [Dd]ebug/
@@ -19,3 +19,4 @@ appsettings.*.local.json
 ## Ostatní
 *.log
 logs/
+data/
