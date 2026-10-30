@@ -8,6 +8,7 @@ using UAI.ZeroVP.API.Controllers;
 using UAI.ZeroVP.API.Instances;
 using UAI.ZeroVP.Data.Entities;
 using UAI.ZeroVP.Data.InMemory;
+using UAI.ZeroVP.Data.Persistence;
 using UAI.ZeroVP.DTO;
 
 namespace UAI.ZeroVP.Tests;
@@ -18,7 +19,8 @@ public class InfoControllerTests
         InMemoryTodoRepository repository,
         string environmentName,
         InstanceIdentity? instance = null,
-        IServer? server = null)
+        IServer? server = null,
+        TodoStorageDescriptor? storage = null)
     {
         var environment = new FakeHostEnvironment { EnvironmentName = environmentName };
         var controller = new InfoController(
@@ -26,7 +28,8 @@ public class InfoControllerTests
             environment,
             TimeProvider.System,
             instance ?? new InstanceIdentity("test-instance", new[] { "http://localhost:5258" }),
-            server ?? new FakeServer());
+            server ?? new FakeServer(),
+            storage ?? new TodoStorageDescriptor(TodoStorageDescriptor.InMemory, Persistent: false, Shared: false, Location: null));
 
         var result = await controller.Get(CancellationToken.None);
 
@@ -114,6 +117,31 @@ public class InfoControllerTests
         Assert.NotEqual(first.InstanceId, second.InstanceId);
         Assert.Equal(5258, first.Port);
         Assert.Equal(5259, second.Port);
+    }
+
+    [Fact]
+    public async Task Get_ReportsSharedStorageWithLocation()
+    {
+        var storage = new TodoStorageDescriptor(TodoStorageDescriptor.SharedJsonFile, Persistent: true, Shared: true, "/data/todos.json");
+
+        var info = await GetInfoAsync(EmptyRepository(), "Testing", storage: storage);
+
+        Assert.NotNull(info.Storage);
+        Assert.Equal("SharedJsonFile", info.Storage!.Type);
+        Assert.True(info.Storage.Persistent);
+        Assert.True(info.Storage.Shared);
+        Assert.Equal("/data/todos.json", info.Storage.Location);
+    }
+
+    [Fact]
+    public async Task Get_ReportsInMemoryStorageWithoutLocation()
+    {
+        var info = await GetInfoAsync(EmptyRepository(), "Testing");
+
+        Assert.Equal("InMemory", info.Storage!.Type);
+        Assert.False(info.Storage.Persistent);
+        Assert.False(info.Storage.Shared);
+        Assert.Null(info.Storage.Location);
     }
 
     /// <summary>Server that only reports the given addresses (like Kestrel after it has started).</summary>
