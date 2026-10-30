@@ -44,7 +44,13 @@ public sealed class TodosController : ControllerBase
         [FromQuery] string? userId,
         CancellationToken cancellationToken)
     {
-        var items = await _repository.GetAllAsync(isCompleted, userId, cancellationToken);
+        // ASP.NET Core binds an empty "?userId=" to null, which would silently mean "no filter"
+        // and return the tasks of every user. An explicitly present but empty userId matches nothing.
+        var userIdFilter = userId is null && Request?.Query.ContainsKey("userId") == true
+            ? string.Empty
+            : userId;
+
+        var items = await _repository.GetAllAsync(isCompleted, userIdFilter, cancellationToken);
 
         return Ok(items.Select(item => item.ToDto()).ToList());
     }
