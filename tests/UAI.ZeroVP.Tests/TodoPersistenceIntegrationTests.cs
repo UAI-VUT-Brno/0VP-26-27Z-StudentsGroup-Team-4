@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using UAI.ZeroVP.Data.Entities;
 using UAI.ZeroVP.Data.InMemory;
 using UAI.ZeroVP.Data.Persistence;
@@ -8,6 +9,19 @@ namespace UAI.ZeroVP.Tests;
 
 public sealed class TodoPersistenceIntegrationTests : IDisposable
 {
+    private sealed class TestLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message, Exception? Exception)> Logs { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            Logs.Add((logLevel, formatter(state, exception), exception));
+        }
+    }
+
     private readonly string _tempDirectory;
     private readonly string _tempFilePath;
     private readonly PhysicalFileStorage _storage;
@@ -96,18 +110,20 @@ public sealed class TodoPersistenceIntegrationTests : IDisposable
     public async Task EdgeCase_PhysicallyCorruptedFile_ShouldNotCrashAndStartEmpty()
     {
         await File.WriteAllTextAsync(_tempFilePath, "<<<corrupted raw data that is not valid json>>>");
+        var logger = new TestLogger<InMemoryTodoRepository>();
 
         var repo = new InMemoryTodoRepository(
             new InMemoryTodoOptions { SeedSampleData = false },
             TimeProvider.System,
             _storage,
             _options,
-            NullLogger<InMemoryTodoRepository>.Instance);
+            logger);
 
         var ex = await Record.ExceptionAsync(() => repo.LoadAsync());
 
         Assert.Null(ex);
         Assert.Equal(0, await repo.CountAsync());
+        Assert.Contains(logger.Logs, l => l.Level == LogLevel.Error && l.Message.Contains("corrupted"));
     }
 
     [Fact]

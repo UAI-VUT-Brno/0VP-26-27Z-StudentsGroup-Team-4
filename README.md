@@ -1,4 +1,4 @@
-# UAI.ZeroVP – ukázkové API pro výuku Dockeru
+﻿# UAI.ZeroVP – ukázkové API pro výuku Dockeru
 
 Jednoduché REST API pro správu úkolů (ToDo), rozdělené do tří projektů.
 Slouží jako výchozí bod pro navazující lekce o kontejnerizaci.
@@ -31,21 +31,41 @@ Závislosti tvoří jednosměrný řetěz **DTO → Data → API**. Kontroler zn
 
 ## Úložiště dat
 
-Data žijí **pouze v operační paměti procesu** (`ConcurrentDictionary`).
-Zastavením aplikace nebo kontejneru se nenávratně ztratí a každá replika má vlastní,
-na ostatních nezávislou sadu dat. To je záměr a navazuje se na něj:
-[case study A](case-study-a-dockerfile/) to ukazuje v příkladech 4 a 5 (restart
-kontejneru, replikace za nginx), [case study B](case-study-b-tooling/05-compose/)
-pak protiklad – pojmenovaný svazek, který restart přežije.
+Data žijí v paměťovém úložišti procesu (`ConcurrentDictionary`), které je při běžném chodu aplikace doplněno o perzistenci do souboru JSON (`JsonPersistence`). Při startu aplikace se úkoly načtou ze souboru a při ukončení se do něj automaticky uloží (`TodoPersistenceHostedService`).
 
-Při startu se vkládají čtyři ukázkové úkoly. Vypnout je lze nastavením:
+### Konfigurace perzistence (JsonPersistence)
+
+Ukládání a načítání z disku se konfiguruje v sekci `JsonPersistence`:
+
+```jsonc
+// appsettings.json
+"JsonPersistence": {
+  "Enabled": true,
+  "FilePath": "data/todos.json"
+}
+```
+
+- `Enabled` (`bool`, výchozí `true`) – povoluje nebo zakazuje diskovou perzistenci.
+- `FilePath` (`string`, výchozí `data/todos.json`) – relativní nebo absolutní cesta k souboru s úkoly.
+
+Nastavení lze přepsat proměnnými prostředí (oddělovač sekcí `__`):
+```bash
+JsonPersistence__Enabled=true
+JsonPersistence__FilePath=data/todos.json
+```
+
+### Chování při startu a ukázková data (Seeding)
+
+Při startu aplikace bez existujícího souboru se vkládají čtyři ukázkové úkoly (pokud je `Todo:SeedSampleData` zapnuto). Pokud soubor s perzistovanými úkoly existuje, data ze souboru mají přednost a ukázková data se přepíší obsahem souboru.
+
+Ukázková data lze vypnout nastavením:
 
 ```jsonc
 // appsettings.json
 "Todo": { "SeedSampleData": false }
 ```
 
-nebo proměnnou prostředí `Todo__SeedSampleData=false` (dvojité podtržítko = oddělovač sekcí).
+nebo proměnnou prostředí `Todo__SeedSampleData=false`.
 
 ## Spuštění
 

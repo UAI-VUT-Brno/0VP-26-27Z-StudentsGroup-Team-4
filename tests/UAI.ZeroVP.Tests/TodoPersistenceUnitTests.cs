@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using UAI.ZeroVP.API.HostedServices;
-using UAI.ZeroVP.Data.Abstractions;
 using UAI.ZeroVP.Data.Entities;
 using UAI.ZeroVP.Data.InMemory;
 using UAI.ZeroVP.Data.Persistence;
@@ -13,6 +12,11 @@ namespace UAI.ZeroVP.Tests;
 
 public class TodoPersistenceUnitTests
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private sealed class FakeFileStorage : IFileStorage
     {
         public Dictionary<string, string> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -68,54 +72,122 @@ public class TodoPersistenceUnitTests
     }
 
     [Fact]
-    public void Serialization_And_Deserialization_ShouldPreserveDataAccurately()
+    public async Task Serialization_And_Deserialization_ShouldPreserveDataAccurately()
     {
-        var originalTasks = new List<TodoItem>
+        var fakeStorage = new FakeFileStorage();
+        var persistenceOptions = new JsonPersistenceOptions { Enabled = true, FilePath = "test/todos.json" };
+        var repoSave = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = false },
+            TimeProvider.System,
+            fakeStorage,
+            persistenceOptions);
+
+        var task1 = new TodoItem
         {
-            new()
+            Id = Guid.NewGuid(),
+            Title = "Task 1",
+            Description = "Full field check",
+            Priority = TodoPriority.High,
+            IsCompleted = true,
+            CreatedAtUtc = new DateTimeOffset(2026, 1, 10, 10, 0, 0, TimeSpan.Zero),
+            CompletedAtUtc = new DateTimeOffset(2026, 1, 10, 11, 0, 0, TimeSpan.Zero),
+            DueAtUtc = new DateTimeOffset(2026, 1, 15, 12, 0, 0, TimeSpan.Zero),
+            UpdatedAtUtc = new DateTimeOffset(2026, 1, 10, 11, 0, 0, TimeSpan.Zero),
+            UserId = "anna"
+        };
+        var task2 = new TodoItem
+        {
+            Id = Guid.NewGuid(),
+            Title = "Task 2",
+            Description = "Nullable fields check",
+            Priority = TodoPriority.Low,
+            IsCompleted = false,
+            CreatedAtUtc = new DateTimeOffset(2026, 1, 11, 8, 30, 0, TimeSpan.Zero),
+            CompletedAtUtc = null,
+            DueAtUtc = null,
+            UpdatedAtUtc = new DateTimeOffset(2026, 1, 11, 8, 30, 0, TimeSpan.Zero),
+            UserId = "petr"
+        };
+
+        await repoSave.AddAsync(task1);
+        await repoSave.AddAsync(task2);
+        await repoSave.SaveAsync();
+
+        var repoLoad = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = false },
+            TimeProvider.System,
+            fakeStorage,
+            persistenceOptions);
+
+        await repoLoad.LoadAsync();
+        var loaded = await repoLoad.GetAllAsync();
+
+        Assert.Equal(2, loaded.Count);
+
+        var loaded1 = loaded.Single(t => t.Id == task1.Id);
+        Assert.Equal(task1.Title, loaded1.Title);
+        Assert.Equal(task1.Description, loaded1.Description);
+        Assert.Equal(task1.Priority, loaded1.Priority);
+        Assert.Equal(task1.IsCompleted, loaded1.IsCompleted);
+        Assert.Equal(task1.CreatedAtUtc, loaded1.CreatedAtUtc);
+        Assert.Equal(task1.CompletedAtUtc, loaded1.CompletedAtUtc);
+        Assert.Equal(task1.DueAtUtc, loaded1.DueAtUtc);
+        Assert.Equal(task1.UpdatedAtUtc, loaded1.UpdatedAtUtc);
+        Assert.Equal(task1.UserId, loaded1.UserId);
+
+        var loaded2 = loaded.Single(t => t.Id == task2.Id);
+        Assert.Equal(task2.Title, loaded2.Title);
+        Assert.Equal(task2.Description, loaded2.Description);
+        Assert.Equal(task2.Priority, loaded2.Priority);
+        Assert.Equal(task2.IsCompleted, loaded2.IsCompleted);
+        Assert.Equal(task2.CreatedAtUtc, loaded2.CreatedAtUtc);
+        Assert.Equal(task2.CompletedAtUtc, loaded2.CompletedAtUtc);
+        Assert.Equal(task2.DueAtUtc, loaded2.DueAtUtc);
+        Assert.Equal(task2.UpdatedAtUtc, loaded2.UpdatedAtUtc);
+        Assert.Equal(task2.UserId, loaded2.UserId);
+    }
+
+    [Fact]
+    public async Task SeedSampleData_WhenFileMissing_SeedStays_WhenFileExists_SeedIsOverwritten()
+    {
+        var fakeStorage = new FakeFileStorage();
+        var persistenceOptions = new JsonPersistenceOptions { Enabled = true, FilePath = "test/seed_test.json" };
+
+        var repoMissing = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = true },
+            TimeProvider.System,
+            fakeStorage,
+            persistenceOptions);
+
+        Assert.Equal(4, await repoMissing.CountAsync());
+        await repoMissing.LoadAsync();
+        Assert.Equal(4, await repoMissing.CountAsync());
+
+        var persistedId = Guid.NewGuid();
+        var fileJson = @"[
             {
-                Id = Guid.NewGuid(),
-                Title = "Preserved Task 1",
-                Description = "Description 1",
-                Priority = TodoPriority.High,
-                IsCompleted = true,
-                CreatedAtUtc = new DateTimeOffset(2026, 1, 10, 10, 0, 0, TimeSpan.Zero),
-                CompletedAtUtc = new DateTimeOffset(2026, 1, 10, 11, 0, 0, TimeSpan.Zero),
-                UserId = "anna"
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Title = "Preserved Task 2",
-                Description = "Description 2",
-                Priority = TodoPriority.Normal,
-                IsCompleted = false,
-                CreatedAtUtc = new DateTimeOffset(2026, 1, 11, 10, 0, 0, TimeSpan.Zero),
-                UserId = "petr"
+                ""Id"": """ + persistedId + @""",
+                ""Title"": ""Persisted Task"",
+                ""Priority"": ""High"",
+                ""IsCompleted"": false,
+                ""CreatedAtUtc"": ""2026-01-01T00:00:00Z""
             }
-        };
+        ]";
+        fakeStorage.Files[persistenceOptions.FilePath] = fileJson;
 
-        var options = new JsonSerializerOptions
-        {
-            Converters = { new JsonStringEnumConverter() }
-        };
+        var repoExisting = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = true },
+            TimeProvider.System,
+            fakeStorage,
+            persistenceOptions);
 
-        var json = JsonSerializer.Serialize(originalTasks, options);
-        var deserialized = JsonSerializer.Deserialize<List<TodoItem>>(json, options);
+        Assert.Equal(4, await repoExisting.CountAsync());
+        await repoExisting.LoadAsync();
 
-        Assert.NotNull(deserialized);
-        Assert.Equal(originalTasks.Count, deserialized.Count);
-        for (int i = 0; i < originalTasks.Count; i++)
-        {
-            Assert.Equal(originalTasks[i].Id, deserialized[i].Id);
-            Assert.Equal(originalTasks[i].Title, deserialized[i].Title);
-            Assert.Equal(originalTasks[i].Description, deserialized[i].Description);
-            Assert.Equal(originalTasks[i].Priority, deserialized[i].Priority);
-            Assert.Equal(originalTasks[i].IsCompleted, deserialized[i].IsCompleted);
-            Assert.Equal(originalTasks[i].UserId, deserialized[i].UserId);
-            Assert.Equal(originalTasks[i].CreatedAtUtc, deserialized[i].CreatedAtUtc);
-            Assert.Equal(originalTasks[i].CompletedAtUtc, deserialized[i].CompletedAtUtc);
-        }
+        var loaded = await repoExisting.GetAllAsync();
+        Assert.Single(loaded);
+        Assert.Equal(persistedId, loaded[0].Id);
+        Assert.Equal("Persisted Task", loaded[0].Title);
     }
 
     [Fact]
@@ -200,10 +272,10 @@ public class TodoPersistenceUnitTests
     }
 
     [Fact]
-    public async Task Shutdown_ShouldTriggerSaveWithCurrentTasks()
+    public async Task Shutdown_ApplicationStopping_ShouldTriggerSaveWithAllCurrentTasks()
     {
         var fakeStorage = new FakeFileStorage();
-        var persistenceOptions = new JsonPersistenceOptions { Enabled = true, FilePath = "test/shutdown.json" };
+        var persistenceOptions = new JsonPersistenceOptions { Enabled = true, FilePath = "test/shutdown_stopping.json" };
         var repoLogger = new TestLogger<InMemoryTodoRepository>();
         var serviceLogger = new TestLogger<TodoPersistenceHostedService>();
 
@@ -219,18 +291,57 @@ public class TodoPersistenceUnitTests
 
         await hostedService.StartAsync(CancellationToken.None);
 
-        await repository.AddAsync(new TodoItem
-        {
-            Id = Guid.NewGuid(),
-            Title = "Task Before Shutdown",
-            Priority = TodoPriority.Normal,
-            CreatedAtUtc = DateTimeOffset.UtcNow
-        });
+        var task1 = new TodoItem { Id = Guid.NewGuid(), Title = "Task Alpha", Priority = TodoPriority.Normal, CreatedAtUtc = DateTimeOffset.UtcNow };
+        var task2 = new TodoItem { Id = Guid.NewGuid(), Title = "Task Beta", Priority = TodoPriority.High, CreatedAtUtc = DateTimeOffset.UtcNow };
+        await repository.AddAsync(task1);
+        await repository.AddAsync(task2);
 
         lifetime.StopApplication();
 
         Assert.Equal(1, fakeStorage.WriteCount);
         Assert.Equal(persistenceOptions.FilePath, fakeStorage.LastWrittenPath);
-        Assert.Contains("Task Before Shutdown", fakeStorage.LastWrittenContent);
+
+        var savedTasks = JsonSerializer.Deserialize<List<TodoItem>>(fakeStorage.LastWrittenContent!, JsonOptions);
+        Assert.NotNull(savedTasks);
+        Assert.Equal(2, savedTasks.Count);
+        Assert.Contains(savedTasks, t => t.Id == task1.Id && t.Title == "Task Alpha");
+        Assert.Contains(savedTasks, t => t.Id == task2.Id && t.Title == "Task Beta");
+    }
+
+    [Fact]
+    public async Task Shutdown_StopAsync_ShouldTriggerSaveWithAllCurrentTasks()
+    {
+        var fakeStorage = new FakeFileStorage();
+        var persistenceOptions = new JsonPersistenceOptions { Enabled = true, FilePath = "test/shutdown_stopasync.json" };
+        var repoLogger = new TestLogger<InMemoryTodoRepository>();
+        var serviceLogger = new TestLogger<TodoPersistenceHostedService>();
+
+        var repository = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = false },
+            TimeProvider.System,
+            fakeStorage,
+            persistenceOptions,
+            repoLogger);
+
+        var lifetime = new TestApplicationLifetime();
+        var hostedService = new TodoPersistenceHostedService(repository, lifetime, serviceLogger);
+
+        await hostedService.StartAsync(CancellationToken.None);
+
+        var task1 = new TodoItem { Id = Guid.NewGuid(), Title = "Task One", Priority = TodoPriority.Low, CreatedAtUtc = DateTimeOffset.UtcNow };
+        var task2 = new TodoItem { Id = Guid.NewGuid(), Title = "Task Two", Priority = TodoPriority.High, CreatedAtUtc = DateTimeOffset.UtcNow };
+        await repository.AddAsync(task1);
+        await repository.AddAsync(task2);
+
+        await hostedService.StopAsync(CancellationToken.None);
+
+        Assert.True(fakeStorage.WriteCount >= 1);
+        Assert.Equal(persistenceOptions.FilePath, fakeStorage.LastWrittenPath);
+
+        var savedTasks = JsonSerializer.Deserialize<List<TodoItem>>(fakeStorage.LastWrittenContent!, JsonOptions);
+        Assert.NotNull(savedTasks);
+        Assert.Equal(2, savedTasks.Count);
+        Assert.Contains(savedTasks, t => t.Id == task1.Id && t.Title == "Task One");
+        Assert.Contains(savedTasks, t => t.Id == task2.Id && t.Title == "Task Two");
     }
 }
