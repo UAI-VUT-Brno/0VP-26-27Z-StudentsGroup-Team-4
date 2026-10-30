@@ -47,12 +47,52 @@ Ukládání a načítání z disku se konfiguruje v sekci `JsonPersistence`:
 
 - `Enabled` (`bool`, výchozí `true`) – povoluje nebo zakazuje diskovou perzistenci.
 - `FilePath` (`string`, výchozí `data/todos.json`) – relativní nebo absolutní cesta k souboru s úkoly.
+- `Shared` (`bool`, výchozí `false`) – sdílený režim pro více souběžných instancí, viz [Sdílené úložiště](#sdílené-úložiště-více-instancí-jedna-databáze).
+- `LockTimeoutMilliseconds` (`int`, výchozí `10000`) – jak dlouho se ve sdíleném režimu čeká na zámek souboru.
 
 Nastavení lze přepsat proměnnými prostředí (oddělovač sekcí `__`):
 ```bash
 JsonPersistence__Enabled=true
 JsonPersistence__FilePath=data/todos.json
 ```
+
+### Sdílené úložiště (více instancí, jedna databáze)
+
+Ve výchozím režimu drží každý proces data v paměti a do souboru je zapíše až při ukončení, takže dvě
+instance se stejným souborem by si data přepisovaly. Pro souběžné instance proto existuje **sdílený režim**
+(`JsonPersistence__Shared=true`), kde je **soubor jediným zdrojem pravdy**:
+
+- každá operace (čtení i zápis) soubor krátce **zamkne** (soubor `todos.json.lock`; v rámci procesu navíc
+  semafor), přečte aktuální obsah, provede změnu a zapíše ji do dočasného souboru, který **atomicky nahradí**
+  `todos.json`. Úkol vytvořený jednou instancí je tedy hned vidět všem ostatním;
+- současné zápisy z více instancí se **serializují**: nic se neztratí, soubor se nepoškodí a nevznikají
+  chyby „soubor je používán jiným procesem“ (zámek se opakuje s krátkou prodlevou, nejdéle
+  `LockTimeoutMilliseconds`, pak operace skončí chybou `TimeoutException`);
+- při ukončení se nic neukládá, protože se zapisuje po každé změně;
+- při startu více instancí najednou vytvoří chybějící soubor s ukázkovými daty jen první; ostatní ho najdou hotový;
+- poškozený soubor se zaloguje (`corrupted`), zkopíruje do `todos.json.corrupt-<čas>` a instance začne s prázdným
+  stavem; první další zápis soubor opraví.
+
+```bash
+JsonPersistence__Enabled=true
+JsonPersistence__Shared=true
+JsonPersistence__FilePath=/absolutni/cesta/data/todos.json   # u všech instancí stejná, nejlépe absolutní
+```
+
+Skripty `scripts/run-instances.ps1` a `.sh` to nastavují samy (soubor `<repo>/data/todos.json`, lze změnit
+parametrem `-DataFile` / proměnnou `DATA_FILE`). Formát souboru je stejný jako v režimu bez sdílení.
+
+Omezení: zámek souboru spolehlivě funguje na lokálním disku. Na síťových úložištích (NFS/SMB) a mezi hostitelskými
+stroji se na něj spoléhat nelze; pro takové nasazení je potřeba skutečná databáze.
+
+`GET /api/info` ukazuje použité úložiště (bez tajemství):
+
+```json
+"storage": { "type": "SharedJsonFile", "persistent": true, "shared": true, "location": "/repo/data/todos.json" }
+```
+
+`type` je `InMemory`, `JsonFile` (jedna instance) nebo `SharedJsonFile`. Instance se stejným `location` a `shared: true`
+vidí stejná data.
 
 ### Chování při startu a ukázková data (Seeding)
 
@@ -89,7 +129,7 @@ Port žádná část kódu nepředepisuje – určuje ho konfigurace (viz [Více
 | `PUT` | `/api/todos/{id}` | Úplná aktualizace úkolu |
 | `POST` | `/api/todos/{id}/complete` | Označení úkolu za dokončený |
 | `DELETE` | `/api/todos/{id}` | Smazání úkolu → `204 No Content` |
-| `GET` | `/api/info` | Hostname instance, prostředí, doba běhu, počet úkolů v paměti |
+| `GET` | `/api/info` | Identita instance (`instanceId`, `urls`, `port`), použité úložiště (`storage`), hostname, prostředí, doba běhu, počet úkolů |
 | `GET` | `/health` | Kontrola zdraví – použije ji `healthcheck` v docker-compose.yml |
 | `GET` | `/swagger` | Interaktivní dokumentace Swagger UI |
 | `GET` | `/openapi/v1.json` | Popis API ve formátu OpenAPI |
@@ -100,11 +140,9 @@ Připravené požadavky k odzkoušení jsou v souboru `src/UAI.ZeroVP.API/UAI.Ze
 ## Více instancí na localhostu
 
 Vedle sebe může běžet několik instancí API. Každá musí mít **vlastní port**, dá se rozlišit
-podle **ID instance** a zapisuje do **vlastního log souboru**.
-
-> **Známé omezení (do sloučení části 2 issue 0VP-T4-09).** Úložiště je pořád jen v paměti
-> procesu, takže instance **nesdílejí data**: úkol vytvořený na jedné instanci druhá nevidí.
-> Sdílení dat řeší navazující sub-issue (perzistentní úložiště, 0VP-T4-08).
+podle **ID instance**, zapisuje do **vlastního log souboru** a všechny **sdílejí jedno úložiště dat**:
+úkol vytvořený přes jednu instanci je hned vidět přes kteroukoli jinou
+(viz [Sdílené úložiště](#sdílené-úložiště-více-instancí-jedna-databáze)).
 
 ### Spuštění skriptem
 
@@ -120,7 +158,8 @@ powershell -ExecutionPolicy Bypass -File scripts/run-instances.ps1 -Count 3 -Bas
 
 Skript projekt jednou sestaví, spustí `N` procesů na po sobě jdoucích portech a ukončíte je všechny
 pomocí Ctrl+C. Každé instanci nastaví port (`--urls`), ID `api-1`, `api-2`, … (`Instance__Id`) a vlastní
-log soubor (`FileLogging__IncludeInstanceId=true`). Volitelné parametry:
+log soubor (`FileLogging__IncludeInstanceId=true`). Všechny instance dostanou stejný soubor s daty
+(`JsonPersistence__Shared=true`, `JsonPersistence__FilePath`). Volitelné parametry:
 
 | Nastavení | `run-instances.sh` | `run-instances.ps1` | Výchozí |
 |---|---|---|---|
@@ -128,6 +167,7 @@ log soubor (`FileLogging__IncludeInstanceId=true`). Volitelné parametry:
 | Port první instance | 2. argument | `-BasePort` | `5258` |
 | Předpona ID instance | `ID_PREFIX=node` | `-IdPrefix node` | `api` |
 | Prostředí | `ASPNETCORE_ENVIRONMENT=Production` | `-EnvironmentName Production` | `Development` |
+| Soubor s daty (sdílený) | `DATA_FILE=/cesta/todos.json` | `-DataFile` | `<repo>/data/todos.json` |
 | Bez sestavení | `NO_BUILD=1` | `-NoBuild` | sestaví se |
 
 ### Ruční spuštění
@@ -144,26 +184,44 @@ Přepínač `--no-launch-profile` vynechá `launchSettings.json`, který by jina
 `Development`. Druhou instanci spouštějte až po dokončení sestavení první, jinak se obě sestavení
 potkají na stejných souborech (skript sestaví jednou a spouští už hotové binárky).
 
-Při ručním spuštění nastavte každé instanci ještě vlastní log soubor, jinak píšou obě do téhož:
+Při ručním spuštění nastavte každé instanci vlastní ID a log soubor (jinak píšou obě do téhož) a všem
+**stejný sdílený soubor s daty** (jinak by každá pracovala se svými daty):
 
 ```bash
+export JsonPersistence__Enabled=true JsonPersistence__Shared=true
+export JsonPersistence__FilePath=/absolutni/cesta/data/todos.json
+
+Instance__Id=api-1 FileLogging__IncludeInstanceId=true \
+  dotnet run --project src/UAI.ZeroVP.API --no-launch-profile --urls http://localhost:5258
 Instance__Id=api-2 FileLogging__IncludeInstanceId=true \
   dotnet run --project src/UAI.ZeroVP.API --no-launch-profile --urls http://localhost:5259
 ```
 
+Port `0` (`--urls http://127.0.0.1:0`) nechá výběr volného portu na systému; skutečný port pak ukazuje
+`/api/info` a řádek `Now listening on` v konzoli.
+
 ### Jak instance rozeznat
 
 1. **`GET /api/info`** – každá instance vrací vlastní `instanceId`, `urls` (adresy, na kterých opravdu
-   naslouchá) a `port`. Původní pole (`machineName`, `environment`, `version`, `utcNow`, `uptime`,
-   `todoCount`) zůstávají beze změny.
+   naslouchá), `port` a `storage` (použité úložiště). Původní pole (`machineName`, `environment`, `version`,
+   `utcNow`, `uptime`, `todoCount`) zůstávají beze změny.
 
    ```bash
-   curl http://localhost:5258/api/info   # "instanceId": "api-1", "port": 5258, ...
-   curl http://localhost:5259/api/info   # "instanceId": "api-2", "port": 5259, ...
+   curl http://localhost:5258/api/info   # "instanceId": "api-1", "port": 5258, "storage": {...}
+   curl http://localhost:5259/api/info   # "instanceId": "api-2", "port": 5259, stejné "storage.location"
    ```
 
 2. **Log soubory** – `src/UAI.ZeroVP.API/logs/zerovp-api-1-yyyyMMdd.log`, `zerovp-api-2-yyyyMMdd.log`, …
 3. **Konzole** – událost `ApplicationStarted` uvádí adresu, na které instance naslouchá.
+
+### Vyzkoušení sdílení dat
+
+```bash
+# vytvoření úkolu přes instanci 1 …
+curl -X POST http://localhost:5258/api/todos -H "Content-Type: application/json" -d '{"title":"Z první instance"}'
+# … a jeho přečtení přes instanci 2
+curl http://localhost:5259/api/todos
+```
 
 ### ID instance a port – nastavení
 

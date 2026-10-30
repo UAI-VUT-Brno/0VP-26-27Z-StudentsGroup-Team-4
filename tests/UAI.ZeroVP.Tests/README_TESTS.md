@@ -22,6 +22,11 @@ Run all tests from the repository root:
 | InstanceIdentityTests | Instance id and port from configuration | `ConfigurationBuilder` with in-memory values; explicit id, default `{MachineName}-{port}`, `urls` / `http_ports` / Kestrel endpoint, no hardcoded port, port 0, address parsing |
 | InfoControllerTests (instance part) | `instanceId`, `urls`, `port` in `GET /api/info` | Controller as a normal class with a fake `IServer`; real vs. configured address, two instances differ |
 | InstanceInfoApiTests | Several instances side by side | Two `WebApplicationFactory` hosts with different id/port; `/api/info` fields (new and existing), separate log files, default log file name unchanged |
+| SharedJsonFileTodoRepositoryTests | Shared JSON file storage | Several repositories on one temp file: visibility of add/update/delete, atomic batch, seeding once, corrupted file (log + backup + recovery), 6 x 20 concurrent writers lose nothing, lock timeout, lock released |
+| SharedStorageRegistrationTests | Which repository DI registers | Snapshot by default, shared with `Shared=true`, disabled persistence wins, options built lazily, storage descriptor |
+| SharedStorageApiTests | Two API hosts, one shared file | Create on A -> read on B, update/delete visibility, 80 simultaneous POSTs to both hosts, seeding once, restart keeps data, `/api/info` `storage` |
+| InstanceStartupTests | Real Kestrel on port 0 | 6 hosts started at once get different real ports, each answers on its own address |
+| MultiProcessInstanceTests (`Category=MultiProcess`) | Real OS processes | Concurrent startup on port 0, create on A -> read on B, 60 simultaneous POSTs across 3 processes (no lost data, no file-in-use errors, valid JSON), restart keeps data |
 | LogFileNamingTests, JsonFileLoggerProviderInstanceTests | Log file naming per instance | File name with/without instance id, sanitizing, two providers in one folder write two files, retention never deletes another instance's files |
 | WeeklyTodosApiTests | `POST /api/todos/repeat` over HTTP | `WebApplicationFactory`; JSON binding and the standard 400 response for 15 invalid bodies, no task created |
 
