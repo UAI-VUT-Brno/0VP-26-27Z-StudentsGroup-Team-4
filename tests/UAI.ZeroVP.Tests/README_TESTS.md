@@ -19,6 +19,10 @@ Run all tests from the repository root:
 | WeeklyRequestValidationTests | Validation of `CreateWeeklyTodoItemsRequest` | `Validator.TryValidateObject`; `repeatCount` 0/1/52/53, missing first due date, title/description limits, last occurrence beyond the supported date range |
 | TodoMapperWeeklyTests | Weekly date calculation in `ToEntities` | Direct calls; occurrence count, exactly 7 days apart, month/year/leap-day/DST boundaries, UTC normalization, copied fields, every occurrence starts incomplete |
 | TodosControllerWeeklyTests | `POST /api/todos/repeat` action | Controller as a normal class with a fixed clock; 201, occurrences, persistence, independence of occurrences, log event |
+| InstanceIdentityTests | Instance id and port from configuration | `ConfigurationBuilder` with in-memory values; explicit id, default `{MachineName}-{port}`, `urls` / `http_ports` / Kestrel endpoint, no hardcoded port, port 0, address parsing |
+| InfoControllerTests (instance part) | `instanceId`, `urls`, `port` in `GET /api/info` | Controller as a normal class with a fake `IServer`; real vs. configured address, two instances differ |
+| InstanceInfoApiTests | Several instances side by side | Two `WebApplicationFactory` hosts with different id/port; `/api/info` fields (new and existing), separate log files, default log file name unchanged |
+| LogFileNamingTests, JsonFileLoggerProviderInstanceTests | Log file naming per instance | File name with/without instance id, sanitizing, two providers in one folder write two files, retention never deletes another instance's files |
 | WeeklyTodosApiTests | `POST /api/todos/repeat` over HTTP | `WebApplicationFactory`; JSON binding and the standard 400 response for 15 invalid bodies, no task created |
 
 Tests follow the Arrange-Act-Assert pattern. They need no database, network or Docker.

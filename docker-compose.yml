@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5258:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Swagger__Enabled=true
+      - Todo__SeedSampleData=true
+      - FileLogging__Directory=/app/logs
+    healthcheck:
+      test: ["CMD", "dotnet", "/app/healthcheck/HealthCheck.dll", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

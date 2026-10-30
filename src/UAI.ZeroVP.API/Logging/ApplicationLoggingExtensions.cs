@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using UAI.ZeroVP.API.Instances;
 
 namespace UAI.ZeroVP.API.Logging;
 
@@ -17,6 +18,9 @@ public static class ApplicationLoggingExtensions
 
         builder.Services.AddSingleton<ApplicationLifecycleLogger>();
 
+        // ID instance je potřeba už při vzniku poskytovatele (název souboru).
+        builder.Services.AddInstanceIdentity();
+
         var fileOptions = new FileLoggingOptions();
         builder.Configuration.GetSection(FileLoggingOptions.SectionName).Bind(fileOptions);
 
@@ -26,7 +30,17 @@ public static class ApplicationLoggingExtensions
 
             // Registrace přes továrnu (ne hotovou instancí): kontejner pak poskytovatele
             // při ukončení aplikace sám zavolá Dispose a ten vyprázdní frontu do souboru.
-            builder.Services.AddSingleton<ILoggerProvider>(_ => new JsonFileLoggerProvider(fileOptions, contentRoot));
+            // Nastavení se čte až tady z hotové konfigurace; ID instance určuje název souboru.
+            builder.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
+            {
+                var options = new FileLoggingOptions();
+                serviceProvider.GetRequiredService<IConfiguration>()
+                    .GetSection(FileLoggingOptions.SectionName).Bind(options);
+
+                var instance = serviceProvider.GetRequiredService<InstanceIdentity>();
+
+                return new JsonFileLoggerProvider(options, contentRoot, instanceId: instance.Id);
+            });
         }
 
         return builder;

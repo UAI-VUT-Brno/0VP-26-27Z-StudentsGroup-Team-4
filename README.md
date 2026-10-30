@@ -76,6 +76,8 @@ dotnet run --project src/UAI.ZeroVP.API
 API naslouchá na `http://localhost:5258`. Kořen `/` přesměruje na Swagger UI
 (nebo na seznam úkolů, pokud je Swagger vypnutý).
 
+Port žádná část kódu nepředepisuje – určuje ho konfigurace (viz [Více instancí na localhostu](#více-instancí-na-localhostu)).
+
 ## Endpointy
 
 | Metoda | Cesta | Popis |
@@ -88,18 +90,101 @@ API naslouchá na `http://localhost:5258`. Kořen `/` přesměruje na Swagger UI
 | `POST` | `/api/todos/{id}/complete` | Označení úkolu za dokončený |
 | `DELETE` | `/api/todos/{id}` | Smazání úkolu → `204 No Content` |
 | `GET` | `/api/info` | Hostname instance, prostředí, doba běhu, počet úkolů v paměti |
-| `GET` | `/health` | Kontrola zdraví – použije ji `HEALTHCHECK` v Dockerfile |
+| `GET` | `/health` | Kontrola zdraví – použije ji `healthcheck` v docker-compose.yml |
 | `GET` | `/swagger` | Interaktivní dokumentace Swagger UI |
 | `GET` | `/openapi/v1.json` | Popis API ve formátu OpenAPI |
 
 Chybové odpovědi mají jednotný tvar `ProblemDetails` (RFC 9457).
 Připravené požadavky k odzkoušení jsou v souboru `src/UAI.ZeroVP.API/UAI.ZeroVP.API.http`.
 
+## Více instancí na localhostu
+
+Vedle sebe může běžet několik instancí API. Každá musí mít **vlastní port**, dá se rozlišit
+podle **ID instance** a zapisuje do **vlastního log souboru**.
+
+> **Známé omezení (do sloučení části 2 issue 0VP-T4-09).** Úložiště je pořád jen v paměti
+> procesu, takže instance **nesdílejí data**: úkol vytvořený na jedné instanci druhá nevidí.
+> Sdílení dat řeší navazující sub-issue (perzistentní úložiště, 0VP-T4-08).
+
+### Spuštění skriptem
+
+```bash
+# Linux / macOS / Git Bash: 3 instance na portech 5258, 5259, 5260
+bash scripts/run-instances.sh 3 5258
+```
+
+```powershell
+# Windows (PowerShell): totéž
+powershell -ExecutionPolicy Bypass -File scripts/run-instances.ps1 -Count 3 -BasePort 5258
+```
+
+Skript projekt jednou sestaví, spustí `N` procesů na po sobě jdoucích portech a ukončíte je všechny
+pomocí Ctrl+C. Každé instanci nastaví port (`--urls`), ID `api-1`, `api-2`, … (`Instance__Id`) a vlastní
+log soubor (`FileLogging__IncludeInstanceId=true`). Volitelné parametry:
+
+| Nastavení | `run-instances.sh` | `run-instances.ps1` | Výchozí |
+|---|---|---|---|
+| Počet instancí | 1. argument | `-Count` | `3` |
+| Port první instance | 2. argument | `-BasePort` | `5258` |
+| Předpona ID instance | `ID_PREFIX=node` | `-IdPrefix node` | `api` |
+| Prostředí | `ASPNETCORE_ENVIRONMENT=Production` | `-EnvironmentName Production` | `Development` |
+| Bez sestavení | `NO_BUILD=1` | `-NoBuild` | sestaví se |
+
+### Ruční spuštění
+
+Port se předává přepínačem `--urls` (nebo proměnnou `ASPNETCORE_URLS`, nebo klíčem `urls` v konfiguraci).
+Každou instanci spusťte v samostatném terminálu:
+
+```bash
+dotnet run --project src/UAI.ZeroVP.API --no-launch-profile --urls http://localhost:5258
+dotnet run --project src/UAI.ZeroVP.API --no-launch-profile --urls http://localhost:5259
+```
+
+Přepínač `--no-launch-profile` vynechá `launchSettings.json`, který by jinak nastavil prostředí
+`Development`. Druhou instanci spouštějte až po dokončení sestavení první, jinak se obě sestavení
+potkají na stejných souborech (skript sestaví jednou a spouští už hotové binárky).
+
+Při ručním spuštění nastavte každé instanci ještě vlastní log soubor, jinak píšou obě do téhož:
+
+```bash
+Instance__Id=api-2 FileLogging__IncludeInstanceId=true \
+  dotnet run --project src/UAI.ZeroVP.API --no-launch-profile --urls http://localhost:5259
+```
+
+### Jak instance rozeznat
+
+1. **`GET /api/info`** – každá instance vrací vlastní `instanceId`, `urls` (adresy, na kterých opravdu
+   naslouchá) a `port`. Původní pole (`machineName`, `environment`, `version`, `utcNow`, `uptime`,
+   `todoCount`) zůstávají beze změny.
+
+   ```bash
+   curl http://localhost:5258/api/info   # "instanceId": "api-1", "port": 5258, ...
+   curl http://localhost:5259/api/info   # "instanceId": "api-2", "port": 5259, ...
+   ```
+
+2. **Log soubory** – `src/UAI.ZeroVP.API/logs/zerovp-api-1-yyyyMMdd.log`, `zerovp-api-2-yyyyMMdd.log`, …
+3. **Konzole** – událost `ApplicationStarted` uvádí adresu, na které instance naslouchá.
+
+### ID instance a port – nastavení
+
+| Co | Jak se nastaví | Výchozí hodnota |
+|---|---|---|
+| Port / adresa | `--urls`, `ASPNETCORE_URLS`, klíč `urls` (dále `ASPNETCORE_HTTP_PORTS`, `Kestrel:Endpoints`) | `http://localhost:5258` při `dotnet run` s `launchSettings.json`, jinak výchozí port Kestrelu `5000` |
+| ID instance | `Instance__Id` (v `appsettings.json` `Instance:Id`) | `{MachineName}-{port}`, např. `PC-5258` (při portu `0` místo portu ID procesu) |
+| ID instance v názvu log souboru | `FileLogging__IncludeInstanceId=true` | `false` – název je jako dřív, `zerovp-yyyyMMdd.log` |
+
+Zapnutá volba změní název na `zerovp-{instanceId}-yyyyMMdd.log`. Znaky nevhodné do názvu souboru
+(lomítka, dvojtečky, mezery) se v ID nahradí podtržítkem. Retence (`RetainedFileCount`) maže jen soubory
+**vlastní instance**, logy ostatních instancí ve stejné složce nechá být.
+
+Jedna instance s výchozím nastavením se chová přesně jako dřív: stejný port, stejný název logu.
+
 ## Logování
 
 Aplikace zapisuje do trvalého logu start a zastavení, každý HTTP požadavek a chyby – vždy s časem,
 identifikací události, výsledkem a případným popisem chyby. Záznamy jsou JSON Lines v denních souborech
-`logs/zerovp-yyyyMMdd.log`. Podrobnosti, katalog událostí a příklady jsou v [docs/logging.md](docs/logging.md).
+`logs/zerovp-yyyyMMdd.log` (při souběžném běhu více instancí `zerovp-{instanceId}-yyyyMMdd.log`,
+viz [Více instancí na localhostu](#více-instancí-na-localhostu)). Podrobnosti, katalog událostí a příklady jsou v [docs/logging.md](docs/logging.md).
 
 ## Swagger
 
@@ -205,3 +290,59 @@ docker build -f case-study-a-dockerfile/02-multi-stage-build/Dockerfile -t zerov
 Ignorovací soubory jsou uložené vedle jednotlivých Dockerfile jako
 `<jméno Dockerfile>.dockerignore`, protože všechny příklady sdílejí jeden kontext.
 V běžném projektu patří `.dockerignore` do kořene repozitáře.
+
+## Spuštění v Dockeru (Docker Compose)
+
+API lze spustit v izolovaném Docker kontejneru pomocí Docker Compose. Soubory
+`Dockerfile`, `.dockerignore` a `docker-compose.yml` jsou v kořeni repozitáře.
+
+> **Známé omezení.** Aplikace zatím používá in-memory úložiště. Data vytvořená
+> v kontejneru se při jeho restartu nebo zastavení ztratí. Persistentní úložiště
+> bude doplněno v navazujícím issue.
+
+Kontejner je jen jedna instance API. GitHub Actions kontejnery nesestavují ani
+netestují, CI běží bez Dockeru.
+
+### Příkazy
+
+```bash
+# sestavení image a spuštění na pozadí
+docker compose up --build -d
+
+# stav kontejneru (po startu by měl být "healthy")
+docker compose ps
+
+# logy aplikace (sledování průběhu: -f)
+docker compose logs api
+docker compose logs -f api
+
+# zastavení a odstranění kontejneru
+docker compose down
+```
+
+Po restartu kontejneru (`docker compose restart`) i po `docker compose down` se
+data v paměti ztratí a znovu se vloží ukázkové úkoly.
+
+### Kontrola, že kontejner běží
+
+```bash
+curl http://localhost:5258/health
+curl http://localhost:5258/api/info
+```
+
+Swagger UI je na `http://localhost:5258/swagger`.
+
+### Konfigurace
+
+Nastavení se předává výhradně proměnnými prostředí v `docker-compose.yml`:
+
+| Proměnná | Význam |
+|---|---|
+| `ASPNETCORE_ENVIRONMENT` | prostředí ASP.NET Core |
+| `Swagger__Enabled` | zapnutí Swagger UI |
+| `Todo__SeedSampleData` | vložení ukázkových úkolů při startu |
+| `FileLogging__Directory` | složka souborových logů v kontejneru (`/app/logs`) |
+
+Aplikace v kontejneru běží pod uživatelem bez práv roota a naslouchá na portu
+`8080`, který je na hostiteli dostupný jako `5258`. Kontrola zdraví volá `/health`
+z malého pomocného nástroje v image (runtime image nemá `curl`).
