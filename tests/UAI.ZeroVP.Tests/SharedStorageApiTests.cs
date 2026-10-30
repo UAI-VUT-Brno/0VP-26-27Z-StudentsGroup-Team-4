@@ -5,7 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
-using UAI.ZeroVP.Tests.Logging;
+using UAI.ZeroVP.Tests.Logging; // Obsahuje LogTestHelpers s metodou RedirectLogsToTemp
 
 namespace UAI.ZeroVP.Tests;
 
@@ -51,7 +51,13 @@ public sealed class SharedStorageApiTests : IDisposable
         }
 
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings)));
+        {
+            // Přesměruje objemné logovací soubory z testovací instance do dočasné složky 
+            // nezávisle na appsettings.json.
+            builder.RedirectLogsToTemp();
+            
+            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings));
+        });
 
         _factories.Add(factory);
 

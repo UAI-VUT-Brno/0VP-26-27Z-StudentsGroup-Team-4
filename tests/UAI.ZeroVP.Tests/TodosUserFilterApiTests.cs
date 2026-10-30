@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using UAI.ZeroVP.DTO;
+using UAI.ZeroVP.Tests.Logging; // Přidáno pro LogTestHelpers
 
 namespace UAI.ZeroVP.Tests;
 
@@ -25,7 +26,11 @@ public class TodosUserFilterApiTests : IClassFixture<WebApplicationFactory<Progr
 
     public TodosUserFilterApiTests(WebApplicationFactory<Program> factory)
     {
-        _client = factory.CreateClient();
+        // Přesměrujeme logy pro test do dočasné složky
+        _client = factory.WithWebHostBuilder(builder => 
+        {
+            builder.RedirectLogsToTemp();
+        }).CreateClient();
     }
 
     // Every test uses its own unique user ids, so tests cannot affect each other

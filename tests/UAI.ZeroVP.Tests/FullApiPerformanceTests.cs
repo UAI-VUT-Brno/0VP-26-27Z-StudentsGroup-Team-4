@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using UAI.ZeroVP.DTO;
+using UAI.ZeroVP.Tests.Logging; // Přidáno pro LogTestHelpers
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,8 +25,12 @@ namespace UAI.ZeroVP.Tests
         public FullApiPerformanceTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
         {
             // Aplikace běží se stejným logováním jako v provozu (včetně console loggeru),
-            // aby měření odpovídalo realitě.
-            _client = factory.CreateClient();
+            // aby měření odpovídalo realitě. Zápis do souboru ale přesměrujeme do Tempu.
+            _client = factory.WithWebHostBuilder(builder => 
+            {
+                builder.RedirectLogsToTemp();
+            }).CreateClient();
+            
             _output = output;
         }
 

@@ -83,7 +83,8 @@ public sealed class InstanceInfoApiTests
 
         var info = await GetInfoAsync(instance);
 
-        foreach (var field in new[] { "machineName", "environment", "version", "utcNow", "uptime", "todoCount" })
+        // PŘIDÁNO: "storage" do pole kontrolovaných vlastností
+        foreach (var field in new[] { "machineName", "environment", "version", "utcNow", "uptime", "todoCount", "storage" })
         {
             Assert.True(info.TryGetProperty(field, out _), $"Field '{field}' is missing from /api/info.");
         }
