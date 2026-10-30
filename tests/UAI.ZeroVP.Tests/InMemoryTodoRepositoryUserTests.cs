@@ -110,4 +110,19 @@ public class InMemoryTodoRepositoryUserTests
         var item = Assert.Single(result);
         Assert.Equal("Anna done", item.Title);
     }
+
+    [Fact]
+    public async Task GetAllAsync_CombinesUserIdAndIncompleteFilter()
+    {
+        var repository = CreateEmptyRepository();
+        await repository.AddAsync(CreateItem("Anna done", userId: "anna", isCompleted: true));
+        await repository.AddAsync(CreateItem("Anna open", userId: "anna"));
+        await repository.AddAsync(CreateItem("Petr open", userId: "petr"));
+        await repository.AddAsync(CreateItem("Nobody open"));
+
+        var result = await repository.GetAllAsync(isCompleted: false, userId: "anna");
+
+        var item = Assert.Single(result);
+        Assert.Equal("Anna open", item.Title);
+    }
 }
