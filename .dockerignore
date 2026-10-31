@@ -11,6 +11,7 @@
 
 # Logy a lokální data
 **/logs/
+**/data/
 *.log
 
 # IDE a konfigurace editoru
@@ -27,3 +28,7 @@ scripts/
 case-study-*/
 *.md
 *.zip
+
+# Konfigurace nasazení (do image se nekopíruje; nginx.conf se připojuje jako svazek)
+nginx/
+docker-compose*.yml
