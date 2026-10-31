@@ -1,15 +1,62 @@
+# Celé cílové nasazení v kontejnerech:
+#
+#   klient --> gateway (nginx, jediný vstup) --> api x N (repliky) --> storage (volume todo-data)
+#
+# Spuštění tří replic:  docker compose up --build -d --scale api=3
+# Podrobnosti jsou v README, sekce "Spuštění v Dockeru (Docker Compose)".
+
 services:
+  # Jediné úložiště. Data jsou v JSON souboru na pojmenovaném svazku todo-data, který sdílejí
+  # všechny repliky API. Služba svazek připraví (práva pro uživatele aplikace) a hlásí se jako
+  # "healthy", až je připravený. Repliky API na ni čekají přes depends_on.
+  storage:
+    image: busybox:1.37
+    init: true
+    user: "0:0"
+    command:
+      - sh
+      - -c
+      - >-
+        rm -f /data/.storage-ready
+        && chown 1654:1654 /data
+        && touch /data/.storage-ready
+        && exec tail -f /dev/null
+    volumes:
+      - todo-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /data/.storage-ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
+    restart: unless-stopped
+
+  # API. Bez published portu a bez container_name, aby šlo škálovat (--scale api=N).
+  # Ven vede jen gateway; repliky se rozlišují v GET /api/info (instanceId).
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "5258:8080"
+    image: zerovp-api:local
+    expose:
+      - "8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Swagger__Enabled=true
       - Todo__SeedSampleData=true
+      # Sdílené úložiště: jeden JSON soubor na svazku, všechny repliky stejná cesta.
+      - JsonPersistence__Enabled=true
+      - JsonPersistence__Shared=true
+      - JsonPersistence__FilePath=/data/todos.json
+      # Logy bez kolizí: každá replika má vlastní kontejner i vlastní soubor
+      # zerovp-<instanceId>-yyyyMMdd.log. Konzolový výstup: docker compose logs api
       - FileLogging__Directory=/app/logs
+      - FileLogging__IncludeInstanceId=true
+    volumes:
+      - todo-data:/data
+    depends_on:
+      storage:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "dotnet", "/app/healthcheck/HealthCheck.dll", "http://localhost:8080/health"]
       interval: 10s
@@ -17,3 +64,24 @@ services:
       retries: 3
       start_period: 5s
     restart: unless-stopped
+
+  # Jediný vstup do replik: nginx rozděluje požadavky mezi všechny kontejnery služby api.
+  gateway:
+    image: nginx:1.27-alpine
+    ports:
+      - "${GATEWAY_PORT:-5258}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    restart: unless-stopped
+
+volumes:
+  todo-data:
