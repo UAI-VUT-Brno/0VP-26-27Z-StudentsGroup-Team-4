@@ -351,44 +351,96 @@ V běžném projektu patří `.dockerignore` do kořene repozitáře.
 
 ## Spuštění v Dockeru (Docker Compose)
 
-API lze spustit v izolovaném Docker kontejneru pomocí Docker Compose. Soubory
-`Dockerfile`, `.dockerignore` a `docker-compose.yml` jsou v kořeni repozitáře.
+Celé cílové nasazení běží v kontejnerech: **několik replik API nad jedním úložištěm**.
+Soubory `Dockerfile`, `.dockerignore`, `docker-compose.yml` a `nginx/default.conf` jsou
+v repozitáři. GitHub Actions kontejnery nesestavují ani netestují, CI běží bez Dockeru.
 
-> **Známé omezení.** Aplikace zatím používá in-memory úložiště. Data vytvořená
-> v kontejneru se při jeho restartu nebo zastavení ztratí. Persistentní úložiště
-> bude doplněno v navazujícím issue.
+```text
+klient ──> gateway (nginx, port 5258) ──> api × N (repliky, port 8080 jen uvnitř sítě)
+                                              │
+                                              └──> storage (svazek todo-data, soubor /data/todos.json)
+```
 
-Kontejner je jen jedna instance API. GitHub Actions kontejnery nesestavují ani
-netestují, CI běží bez Dockeru.
+| Služba | Role |
+|---|---|
+| `storage` | jediné úložiště: pojmenovaný svazek `todo-data` s JSON souborem sdíleným všemi replikami; připraví práva svazku a hlásí se jako `healthy` |
+| `api` | API, škáluje se přepínačem `--scale api=N`; čeká na zdravé `storage`; bez published portu |
+| `gateway` | nginx, jediný vstup na hostiteli (`http://localhost:5258`), rozděluje požadavky mezi všechny repliky; čeká na zdravé `api` |
 
-### Příkazy
+Úložištěm je JSON soubor ve [sdíleném režimu](#sdílené-úložiště-více-instancí-jedna-databáze)
+(`JsonPersistence__Shared=true`, `JsonPersistence__FilePath=/data/todos.json`), takže úkol vytvořený
+jednou replikou vidí hned všechny ostatní. Data leží na svazku, a proto přežijí restart i znovuvytvoření
+kontejnerů API.
+
+### Spuštění a škálování
 
 ```bash
-# sestavení image a spuštění na pozadí
-docker compose up --build -d
+# sestavení image a spuštění tří replik API, jednoho úložiště a brány
+docker compose up --build -d --scale api=3
 
-# stav kontejneru (po startu by měl být "healthy")
+# stav (storage, api × 3 a gateway by měly být "healthy")
 docker compose ps
 
-# logy aplikace (sledování průběhu: -f)
-docker compose logs api
-docker compose logs -f api
-
-# zastavení a odstranění kontejneru
-docker compose down
+# změna počtu replik za běhu (brána si nové repliky najde sama)
+docker compose up -d --scale api=5 --no-recreate
+docker compose up -d --scale api=2 --no-recreate
 ```
 
-Po restartu kontejneru (`docker compose restart`) i po `docker compose down` se
-data v paměti ztratí a znovu se vloží ukázkové úkoly.
+Port brány na hostiteli lze změnit proměnnou `GATEWAY_PORT` (výchozí `5258`),
+např. `GATEWAY_PORT=8081 docker compose up -d --scale api=3`.
 
-### Kontrola, že kontejner běží
+### Ověření: repliky jsou rozlišitelné
+
+Každá replika vrací v `GET /api/info` vlastní `instanceId` (jméno kontejneru + port, např. `3f9c1a2b7d10-8080`).
+Opakovaným voláním přes bránu uvidíš různé repliky; hlavička `X-Upstream-Addr` ukazuje adresu repliky,
+která požadavek obsloužila.
 
 ```bash
-curl http://localhost:5258/health
-curl http://localhost:5258/api/info
+for i in 1 2 3 4 5 6; do curl -s http://localhost:5258/api/info | grep -o '"instanceId":"[^"]*"'; done
+curl -si http://localhost:5258/api/info | grep -i x-upstream-addr
 ```
 
-Swagger UI je na `http://localhost:5258/swagger`.
+Všechny repliky ukazují stejné `storage` (`"type":"SharedJsonFile"`, `"shared":true`, `"location":"/data/todos.json"`).
+
+### Ověření: data jsou sdílená
+
+```bash
+# úkol vytvořený přes bránu (libovolnou replikou) ...
+curl -X POST http://localhost:5258/api/todos -H "Content-Type: application/json" \
+  -d '{"title":"Úkol z první repliky"}'
+
+# ... vidí každé volání, ať ho obslouží kterákoli replika
+for i in 1 2 3 4 5 6; do curl -s http://localhost:5258/api/todos | grep -c "Úkol z první repliky"; done
+```
+
+Každý řádek výstupu musí být `1`.
+
+### Ověření: data přežijí restart
+
+```bash
+docker compose restart api                              # restart replik
+docker compose up -d --force-recreate --scale api=3 api # znovuvytvoření replik
+curl -s http://localhost:5258/api/todos                 # úkoly jsou pořád tam
+```
+
+### Logy
+
+Každá replika běží ve vlastním kontejneru a zapisuje do vlastního souboru
+`/app/logs/zerovp-<instanceId>-yyyyMMdd.log` (`FileLogging__IncludeInstanceId=true`), takže se logy
+replik nemíchají. Konzolový výstup všech replik:
+
+```bash
+docker compose logs api            # všechny repliky
+docker compose logs -f api         # sledování
+docker compose logs gateway        # přístupový log brány
+```
+
+### Úklid
+
+```bash
+docker compose down        # zastaví a odstraní kontejnery, DATA ZŮSTANOU na svazku todo-data
+docker compose down -v     # odstraní i svazek = smaže všechna data (při dalším startu se vloží ukázkové úkoly)
+```
 
 ### Konfigurace
 
@@ -397,10 +449,18 @@ Nastavení se předává výhradně proměnnými prostředí v `docker-compose.y
 | Proměnná | Význam |
 |---|---|
 | `ASPNETCORE_ENVIRONMENT` | prostředí ASP.NET Core |
-| `Swagger__Enabled` | zapnutí Swagger UI |
-| `Todo__SeedSampleData` | vložení ukázkových úkolů při startu |
-| `FileLogging__Directory` | složka souborových logů v kontejneru (`/app/logs`) |
+| `Swagger__Enabled` | zapnutí Swagger UI (`http://localhost:5258/swagger`) |
+| `Todo__SeedSampleData` | vložení ukázkových úkolů, když soubor s daty ještě neexistuje (při souběžném startu ho vytvoří jen první replika) |
+| `JsonPersistence__Enabled`, `JsonPersistence__Shared`, `JsonPersistence__FilePath` | sdílené úložiště: jeden soubor na svazku, u všech replik stejná cesta |
+| `FileLogging__Directory`, `FileLogging__IncludeInstanceId` | složka souborových logů a ID repliky v názvu souboru |
+| `Instance__Id` | volitelně pevné ID instance; bez něj je to `{hostname kontejneru}-{port}` |
 
-Aplikace v kontejneru běží pod uživatelem bez práv roota a naslouchá na portu
-`8080`, který je na hostiteli dostupný jako `5258`. Kontrola zdraví volá `/health`
+Aplikace v kontejneru běží pod uživatelem bez práv roota a naslouchá na portu `8080`. Kontrola zdraví volá `/health`
 z malého pomocného nástroje v image (runtime image nemá `curl`).
+
+### Omezení
+
+Zámek souboru funguje spolehlivě na lokálním svazku jednoho hostitele (viz
+[sdílené úložiště](#sdílené-úložiště-více-instancí-jedna-databáze)). Bind mount sdílené složky z Windows/macOS
+ani síťový disk (NFS/SMB) na to nepoužívejte; proto je `todo-data` pojmenovaný svazek. Repliky běží na jednom
+stroji; pro nasazení na více strojích je potřeba skutečná databáze.
