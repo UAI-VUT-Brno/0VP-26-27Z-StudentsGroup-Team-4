@@ -3,6 +3,10 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using UAI.ZeroVP.API.Logging;
+using System.IO;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 
 namespace UAI.ZeroVP.Tests.Logging;
 
@@ -168,5 +172,26 @@ internal static class LogFiles
         {
             return false;
         }
+    }
+}
+
+/// <summary>Rozšiřující metody pro testování logování.</summary>
+public static class LogTestHelpers
+{
+    public static IWebHostBuilder RedirectLogsToTemp(this IWebHostBuilder builder)
+    {
+        return builder.ConfigureAppConfiguration((context, config) =>
+        {
+            var tempPath = Path.Combine(Path.GetTempPath(), "ZeroVP_TestLogs");
+            
+            // Pro jistotu rovnou složku vytvoříme
+            Directory.CreateDirectory(tempPath); 
+            
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                // TADY BYLA CHYBA: Musí to být Directory, ne Path!
+                { "FileLogging:Directory", tempPath } 
+            });
+        });
     }
 }

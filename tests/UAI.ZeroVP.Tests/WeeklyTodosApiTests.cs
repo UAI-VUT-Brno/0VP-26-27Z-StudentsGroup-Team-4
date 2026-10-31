@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using UAI.ZeroVP.DTO;
+using UAI.ZeroVP.Tests.Logging; // Přidáno pro LogTestHelpers
 
 namespace UAI.ZeroVP.Tests;
 
@@ -26,7 +27,11 @@ public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>
 
     public WeeklyTodosApiTests(WebApplicationFactory<Program> factory)
     {
-        _client = factory.CreateClient();
+        // Přesměruje logy z in-memory serveru pro tento test do Tempu
+        _client = factory.WithWebHostBuilder(builder => 
+        {
+            builder.RedirectLogsToTemp();
+        }).CreateClient();
     }
 
     private static StringContent Json(string json) => new(json, Encoding.UTF8, "application/json");

@@ -21,11 +21,7 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     private readonly JsonPersistenceOptions _persistenceOptions;
     private readonly ILogger<InMemoryTodoRepository> _logger;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
+    private static JsonSerializerOptions JsonOptions => TodoJson.Options;
 
     /// <summary>
     /// Inicializuje instanci repozitáře.
@@ -235,29 +231,9 @@ public sealed class InMemoryTodoRepository : ITodoRepository
 
     private void Seed()
     {
-        var now = _timeProvider.GetUtcNow();
-
-        AddSeedItem("Připravit ukázkové API", "Tři projekty: DTO, Data, API.", TodoPriority.High, isCompleted: true, now.AddDays(-2), userId: "anna");
-        AddSeedItem("Napsat Dockerfile", "Vícefázový build nad SDK a runtime image.", TodoPriority.High, isCompleted: false, now.AddDays(-1), userId: "anna");
-        AddSeedItem("Vyzkoušet docker compose", "Spustit API ve dvou replikách.", TodoPriority.Normal, isCompleted: false, now.AddHours(-3), userId: "petr");
-        AddSeedItem("Uklidit nepoužité image", "docker image prune", TodoPriority.Low, isCompleted: false, now.AddMinutes(-30), userId: "petr");
-    }
-
-    private void AddSeedItem(string title, string description, TodoPriority priority, bool isCompleted, DateTimeOffset createdAtUtc, string? userId = null)
-    {
-        var item = new TodoItem
+        foreach (var item in TodoSampleData.Create(_timeProvider.GetUtcNow()))
         {
-            Id = Guid.NewGuid(),
-            Title = title,
-            Description = description,
-            Priority = priority,
-            IsCompleted = isCompleted,
-            CreatedAtUtc = createdAtUtc,
-            CompletedAtUtc = isCompleted ? createdAtUtc.AddHours(1) : null,
-            UpdatedAtUtc = createdAtUtc,
-            UserId = userId
-        };
-
-        _items[item.Id] = item;
+            _items[item.Id] = item;
+        }
     }
 }

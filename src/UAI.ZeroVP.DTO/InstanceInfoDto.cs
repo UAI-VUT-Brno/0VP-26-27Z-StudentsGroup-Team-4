@@ -36,4 +36,10 @@ public sealed record InstanceInfoDto
 
     /// <summary>Port první adresy z <see cref="Urls"/>; <c>null</c>, pokud ho nelze určit.</summary>
     public int? Port { get; init; }
+
+    /// <summary>
+    /// Úložiště, které instance používá (druh, sdílené, cesta k souboru; bez tajemství).
+    /// Instance s totožným <c>storage.location</c> a <c>storage.shared</c> = <c>true</c> vidí stejná data.
+    /// </summary>
+    public StorageInfoDto? Storage { get; init; }
 }

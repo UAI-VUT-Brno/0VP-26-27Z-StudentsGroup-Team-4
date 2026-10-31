@@ -129,6 +129,36 @@ public class InstanceIdentityTests
         Assert.Null(InstanceIdentity.TryGetPort(address));
     }
 
+    [Theory]
+    [InlineData(5258, 5259)]
+    [InlineData(5000, 5001)]
+    [InlineData(8080, 9090)]
+    public void EveryPort_YieldsADifferentDefaultId(int first, int second)
+    {
+        var a = Create(("urls", $"http://localhost:{first}"));
+        var b = Create(("urls", $"http://localhost:{second}"));
+
+        Assert.NotEqual(a.Id, b.Id);
+    }
+
+    [Fact]
+    public void PortZero_IsKeptAsConfigured_NoFixedPortIsSubstituted()
+    {
+        var identity = Create(("urls", "http://127.0.0.1:0"));
+
+        Assert.Equal(new[] { "http://127.0.0.1:0" }, identity.ConfiguredUrls);
+        Assert.Equal(0, InstanceIdentity.TryGetPort("http://127.0.0.1:0"));
+    }
+
+    [Fact]
+    public void TwoProcesses_OnPortZero_GetDifferentDefaultIds()
+    {
+        var first = InstanceIdentity.FromConfiguration(Config(("urls", "http://127.0.0.1:0")), "HOST", processId: 100);
+        var second = InstanceIdentity.FromConfiguration(Config(("urls", "http://127.0.0.1:0")), "HOST", processId: 101);
+
+        Assert.NotEqual(first.Id, second.Id);
+    }
+
     [Fact]
     public void Constructor_RejectsBlankId()
     {

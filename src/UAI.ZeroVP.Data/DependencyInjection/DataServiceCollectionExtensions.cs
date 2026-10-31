@@ -12,7 +12,8 @@ namespace UAI.ZeroVP.Data.DependencyInjection;
 public static class DataServiceCollectionExtensions
 {
     /// <summary>
-    /// Zaregistruje paměťové úložiště úkolů a podpůrné služby persistence jako singleton.
+    /// Zaregistruje úložiště úkolů a podpůrné služby persistence jako singleton:
+    /// paměťové úložiště s JSON snapshotem, nebo při <c>JsonPersistence:Shared=true</c> sdílený JSON soubor.
     /// </summary>
     public static IServiceCollection AddInMemoryTodoData(
         this IServiceCollection services,
@@ -21,22 +22,49 @@ public static class DataServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var todoOptions = new InMemoryTodoOptions();
-        configureTodo?.Invoke(todoOptions);
+        // Nastavení se sestaví až při prvním použití z hotové konfigurace, takže vidí i hodnoty
+        // přidané po CreateBuilder (např. testovací hostitel).
+        services.AddSingleton<InMemoryTodoOptions>(_ =>
+        {
+            var todoOptions = new InMemoryTodoOptions();
+            configureTodo?.Invoke(todoOptions);
 
-        var persistenceOptions = new JsonPersistenceOptions();
-        configurePersistence?.Invoke(persistenceOptions);
+            return todoOptions;
+        });
 
-        services.AddSingleton(todoOptions);
-        services.AddSingleton(persistenceOptions);
+        services.AddSingleton<JsonPersistenceOptions>(_ =>
+        {
+            var persistenceOptions = new JsonPersistenceOptions();
+            configurePersistence?.Invoke(persistenceOptions);
+
+            return persistenceOptions;
+        });
+
         services.AddSingleton<IFileStorage, PhysicalFileStorage>();
+        services.AddSingleton<TodoStorageDescriptor>(sp => TodoStorageDescriptor.From(sp.GetRequiredService<JsonPersistenceOptions>()));
 
-        services.AddSingleton<ITodoRepository>(sp => new InMemoryTodoRepository(
-            sp.GetRequiredService<InMemoryTodoOptions>(),
-            sp.GetService<TimeProvider>(),
-            sp.GetRequiredService<IFileStorage>(),
-            sp.GetRequiredService<JsonPersistenceOptions>(),
-            sp.GetService<ILogger<InMemoryTodoRepository>>()));
+        services.AddSingleton<ITodoRepository>(sp =>
+        {
+            var persistenceOptions = sp.GetRequiredService<JsonPersistenceOptions>();
+
+            // Sdílený režim: soubor je zdrojem pravdy pro víc instancí. Jinak platí původní
+            // paměťové úložiště s načtením při startu a uložením při ukončení.
+            if (persistenceOptions.Enabled && persistenceOptions.Shared)
+            {
+                return new SharedJsonFileTodoRepository(
+                    persistenceOptions,
+                    sp.GetRequiredService<InMemoryTodoOptions>(),
+                    sp.GetService<TimeProvider>(),
+                    sp.GetService<ILogger<SharedJsonFileTodoRepository>>());
+            }
+
+            return new InMemoryTodoRepository(
+                sp.GetRequiredService<InMemoryTodoOptions>(),
+                sp.GetService<TimeProvider>(),
+                sp.GetRequiredService<IFileStorage>(),
+                persistenceOptions,
+                sp.GetService<ILogger<InMemoryTodoRepository>>());
+        });
 
         return services;
     }

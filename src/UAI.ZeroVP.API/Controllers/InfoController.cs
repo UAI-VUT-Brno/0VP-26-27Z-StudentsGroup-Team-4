@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc;
 using UAI.ZeroVP.API.Instances;
 using UAI.ZeroVP.Data.Abstractions;
+using UAI.ZeroVP.Data.Persistence;
 using UAI.ZeroVP.DTO;
 
 namespace UAI.ZeroVP.API.Controllers;
@@ -23,6 +24,7 @@ public sealed class InfoController : ControllerBase
     private readonly TimeProvider _timeProvider;
     private readonly InstanceIdentity _instance;
     private readonly IServer _server;
+    private readonly TodoStorageDescriptor _storage;
 
     /// <summary>Vytvoří kontroler se závislostmi z DI kontejneru.</summary>
     public InfoController(
@@ -30,13 +32,15 @@ public sealed class InfoController : ControllerBase
         IHostEnvironment environment,
         TimeProvider timeProvider,
         InstanceIdentity instance,
-        IServer server)
+        IServer server,
+        TodoStorageDescriptor storage)
     {
         _repository = repository;
         _environment = environment;
         _timeProvider = timeProvider;
         _instance = instance;
         _server = server;
+        _storage = storage;
     }
 
     /// <summary>Vrátí informace o běžící instanci API.</summary>
@@ -65,7 +69,14 @@ public sealed class InfoController : ControllerBase
             TodoCount = await _repository.CountAsync(cancellationToken),
             InstanceId = _instance.Id,
             Urls = urls,
-            Port = InstanceIdentity.TryGetPort(urls.FirstOrDefault())
+            Port = InstanceIdentity.TryGetPort(urls.FirstOrDefault()),
+            Storage = new StorageInfoDto
+            {
+                Type = _storage.Type,
+                Persistent = _storage.Persistent,
+                Shared = _storage.Shared,
+                Location = _storage.Location
+            }
         });
     }
 }

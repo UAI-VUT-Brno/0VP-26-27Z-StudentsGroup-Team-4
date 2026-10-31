@@ -45,7 +45,9 @@ builder.Services.AddInMemoryTodoData(
 
         // Při spuštění pod test runnerem (WebApplicationFactory) persistenci na disk vypneme,
         // aby integrační testy API zůstaly plně izolované a nezanechávaly znečištěný soubor na disku.
-        if (AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith("testhost", StringComparison.OrdinalIgnoreCase) == true))
+        // Test, který sdílené úložiště výslovně zapne (JsonPersistence:Shared=true) a dá mu vlastní soubor
+        // v dočasné složce, tím opt-inuje – jinak by nešlo ověřit sdílení dat mezi instancemi.
+        if (!options.Shared && AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith("testhost", StringComparison.OrdinalIgnoreCase) == true))
         {
             options.Enabled = false;
         }
