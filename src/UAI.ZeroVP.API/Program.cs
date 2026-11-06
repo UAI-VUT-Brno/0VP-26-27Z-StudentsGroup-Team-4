@@ -4,6 +4,7 @@ using Microsoft.OpenApi;
 using UAI.ZeroVP.API.HostedServices;
 using UAI.ZeroVP.API.Instances;
 using UAI.ZeroVP.API.Logging;
+using UAI.ZeroVP.API.Mcp;
 using UAI.ZeroVP.Data.DependencyInjection;
 using UAI.ZeroVP.Data.InMemory;
 using UAI.ZeroVP.Data.Persistence;
@@ -56,6 +57,10 @@ builder.Services.AddInMemoryTodoData(
 builder.Services.AddHostedService<TodoPersistenceHostedService>();
 
 builder.Services.AddHealthChecks();
+
+// Read-only MCP server (tools list_todos and get_todo). The endpoint is mapped below only when Mcp:Enabled=true.
+// Local development only: it has no authentication, see docs/mcp.md.
+builder.Services.AddTodoMcpServer();
 
 builder.Services.AddOpenApi(options =>
 {
@@ -150,6 +155,7 @@ if (swaggerEnabled)
 
 app.MapHealthChecks("/health");
 app.MapControllers();
+app.MapTodoMcpServer();
 
 app.MapGet("/", () => Results.Redirect(swaggerEnabled ? "/swagger" : "/api/todos"))
    .ExcludeFromDescription();
