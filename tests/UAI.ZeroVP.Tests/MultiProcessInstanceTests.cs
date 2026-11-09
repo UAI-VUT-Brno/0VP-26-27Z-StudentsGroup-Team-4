@@ -192,7 +192,8 @@ internal sealed class ApiProcess : IAsyncDisposable
         string instanceId,
         string dataFile,
         string logDirectory,
-        ConcurrentBag<ApiProcess> owner)
+        ConcurrentBag<ApiProcess> owner,
+        IReadOnlyDictionary<string, string>? extraEnvironment = null)
     {
         var (dll, projectDirectory) = Locate();
 
@@ -225,6 +226,14 @@ internal sealed class ApiProcess : IAsyncDisposable
         startInfo.Environment["JsonPersistence__FilePath"] = dataFile;
         startInfo.Environment["FileLogging__Directory"] = logDirectory;
         startInfo.Environment["FileLogging__IncludeInstanceId"] = "true";
+
+        if (extraEnvironment is not null)
+        {
+            foreach (var (name, value) in extraEnvironment)
+            {
+                startInfo.Environment[name] = value;
+            }
+        }
 
         var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         var instance = new ApiProcess(process, instanceId);

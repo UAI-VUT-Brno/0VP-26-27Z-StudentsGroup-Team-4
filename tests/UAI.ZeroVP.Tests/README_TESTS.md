@@ -27,6 +27,7 @@ Run all tests from the repository root:
 | SharedStorageApiTests | Two API hosts, one shared file | Create on A -> read on B, update/delete visibility, 80 simultaneous POSTs to both hosts, seeding once, restart keeps data, `/api/info` `storage` |
 | InstanceStartupTests | Real Kestrel on port 0 | 6 hosts started at once get different real ports, each answers on its own address |
 | MultiProcessInstanceTests (`Category=MultiProcess`) | Real OS processes | Concurrent startup on port 0, create on A -> read on B, 60 simultaneous POSTs across 3 processes (no lost data, no file-in-use errors, valid JSON), restart keeps data |
+| McpServerIntegrationTests, McpDisabledByDefaultTests (`Category=Mcp`) | MCP server at `/mcp` | Real API process on a free local port with 120 tasks and the official MCP client over HTTP: lists the tools, calls `list_todos` (no filter, `isCompleted`, `userId`, both, unknown user) and `get_todo` (found, same as REST, unknown ID, invalid ID); `/mcp` answers 404 unless `Mcp:Enabled=true` |
 | LogFileNamingTests, JsonFileLoggerProviderInstanceTests | Log file naming per instance | File name with/without instance id, sanitizing, two providers in one folder write two files, retention never deletes another instance's files |
 | WeeklyTodosApiTests | `POST /api/todos/repeat` over HTTP | `WebApplicationFactory`; JSON binding and the standard 400 response for 15 invalid bodies, no task created |
 

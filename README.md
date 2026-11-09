@@ -244,6 +244,15 @@ identifikací události, výsledkem a případným popisem chyby. Záznamy jsou 
 `logs/zerovp-yyyyMMdd.log` (při souběžném běhu více instancí `zerovp-{instanceId}-yyyyMMdd.log`,
 viz [Více instancí na localhostu](#více-instancí-na-localhostu)). Podrobnosti, katalog událostí a příklady jsou v [docs/logging.md](docs/logging.md).
 
+## MCP server (read-only, local development only)
+
+The API can expose the ToDo queries to MCP clients (MCP Inspector, GitHub Copilot, Gemini) at `/mcp`
+with two read-only tools, `list_todos` and `get_todo`. They use the existing `ITodoRepository`; the REST API is unchanged.
+
+**The endpoint has no authentication and is not safe to expose publicly.** It is served only when
+`Mcp:Enabled` is `true`: `appsettings.Development.json` turns it on, `appsettings.json` (Production, Docker)
+keeps it off. Tools, manual testing with MCP Inspector and client configuration: [docs/mcp.md](docs/mcp.md).
+
 ## Swagger
 
 Dokument OpenAPI generuje vestavěná knihovna .NET 10 (`Microsoft.AspNetCore.OpenApi`)
