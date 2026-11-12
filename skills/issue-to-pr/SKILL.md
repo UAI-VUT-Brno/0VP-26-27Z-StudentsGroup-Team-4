@@ -52,8 +52,8 @@ any further change to this file's routing logic.
 ```
 
 `<issue-reference>` MUST be one of the following forms. The orchestrator
-accepts all three and normalizes them to a single integer `issueNumber`
-before routing begins.
+accepts any of them and normalizes the input to a single positive integer
+`issueNumber` before routing begins.
 
 | Form                | Example                                                                              |
 |---------------------|---------------------------------------------------------------------------------------|
@@ -64,48 +64,63 @@ before routing begins.
 
 > Note on the markdown-link form: the *display text* may say `#42` while the
 > *link target* points at `/pull/42` (GitHub renders issue/PR cross-references
-> this way once a PR exists). The orchestrator always trusts the numeric ID —
-> whichever source it is extracted from — and never relies on the link text
-> alone, since display text and target can in principle diverge.
+> this way once a PR exists). The orchestrator always trusts the numeric ID of
+> the link *target* and never relies on the link text alone, since display text
+> and target can in principle diverge.
 
 ## 4. Input parsing & validation algorithm
 
-Applied in this order; the first matching rule wins.
+Applied in this order. Steps 2–5 extract a candidate number; the first
+matching extraction rule wins and later extraction rules are not tried.
+Steps 6–8 validate the result.
 
 1. **Strip whitespace** from the raw argument string.
 2. **Markdown link form** — if the argument matches
    `\[#?\d+\]\((https?:\/\/[^\)]+)\)`, extract the URL inside `()` and
    continue to step 3 using that URL as input (the bracketed label is
-   discarded — see note above).
+   discarded — see note in §3). If that URL does not match step 3, the
+   result is `ERR_INVALID_REFERENCE`.
 3. **Full URL form** — if the argument matches
    `^https?:\/\/github\.com\/([^\/\s]+)\/([^\/\s]+)\/(issues|pull)\/(\d+)\/?.*$`:
    - capture group 1/2 as `owner`/`repo` and compare against the configured
      repository (`UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4`); on mismatch,
      fail with `ERR_WRONG_REPO` (see §6) instead of silently proceeding;
-   - capture group 4 as `issueNumber`.
+   - capture group 4 as the candidate `issueNumber`.
 4. **Hash-prefixed form** — if the argument matches `^#(\d+)$`, capture
-   group 1 as `issueNumber`.
+   group 1 as the candidate `issueNumber`.
 5. **Bare number form** — if the argument matches `^(\d+)$`, use it directly
-   as `issueNumber`.
-6. If none of the above match, or `issueNumber` is not a positive integer,
-   fail with `ERR_INVALID_REFERENCE` (see §6). Do not guess or fall back to
-   a default issue.
-7. On success, confirm the issue exists and is open via the GitHub tool
-   available to the orchestrator (read-only lookup) before routing to Stage
-   1. If the issue cannot be found, fail with `ERR_ISSUE_NOT_FOUND`. If it is
-   already closed, warn the user and ask for explicit confirmation before
-   proceeding (do not refuse outright — a closed issue may legitimately be
-   reopened as part of the workflow).
+   as the candidate `issueNumber`.
+6. **No match** — if none of steps 2–5 produced a candidate (for example
+   `abc`, an empty string, or `42 43`), fail with `ERR_INVALID_REFERENCE`
+   (see §6). Do not guess or fall back to a default issue.
+7. **Positive-integer check** — the candidate from step 3, 4 or 5 MUST be an
+   integer **greater than 0**. Otherwise (for example `0`, `#0`, or a URL
+   ending in `/issues/0`) fail with `ERR_INVALID_REFERENCE`. This check
+   applies to every extraction form; it is not specific to the bare-number
+   form.
+8. **Existence check** — confirm the issue exists and is open via the GitHub
+   tool available to the orchestrator (read-only lookup) before routing to
+   Stage 1. If the issue cannot be found, fail with `ERR_ISSUE_NOT_FOUND`. If
+   it is already closed, warn the user and ask for explicit confirmation
+   before proceeding (do not refuse outright — a closed issue may
+   legitimately be reopened as part of the workflow). This confirmation
+   behavior goes beyond the minimum required by Issue 1; the Release/PR
+   subagent specification (Issue 5) must define how a closed or reopened
+   issue is handled when the PR is created.
 
 ### Reference parsing examples
 
-| Input                                                                                  | Parsed `issueNumber` |
+| Input                                                                                  | Result |
 |------------------------------------------------------------------------------------------|:---:|
-| `42`                                                                                     | `42` |
-| `#42`                                                                                     | `42` |
-| `[#42](https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/pull/42)`           | `42` |
-| `https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/issues/42`                | `42` |
+| `42`                                                                                     | `issueNumber = 42` |
+| `#42`                                                                                     | `issueNumber = 42` |
+| `[#42](https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/pull/42)`           | `issueNumber = 42` |
+| `https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/issues/42`                | `issueNumber = 42` |
 | `https://github.com/some-other-org/other-repo/issues/42`                                   | fails: `ERR_WRONG_REPO` |
+| `0`                                                                                         | fails: `ERR_INVALID_REFERENCE` |
+| `#0`                                                                                         | fails: `ERR_INVALID_REFERENCE` |
+| `https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/issues/0`                  | fails: `ERR_INVALID_REFERENCE` |
+| `42 43`                                                                                      | fails: `ERR_INVALID_REFERENCE` |
 | `issue 42` / `#abc` / empty string                                                          | fails: `ERR_INVALID_REFERENCE` |
 
 ## 5. Stage pipeline & subagent ownership
@@ -155,7 +170,7 @@ attempt the next stage automatically.
 
 | Code                  | Meaning                                              | Orchestrator behavior |
 |------------------------|--------------------------------------------------------|--------------------------|
-| `ERR_INVALID_REFERENCE` | Argument matched none of the accepted forms.           | Stop before Stage 1; show accepted formats from §3. |
+| `ERR_INVALID_REFERENCE` | Argument matched none of the accepted forms, or the number is not greater than 0. | Stop before Stage 1; show accepted formats from §3. |
 | `ERR_WRONG_REPO`        | URL form pointed at a different owner/repo.             | Stop before Stage 1; do not silently use the issue number anyway. |
 | `ERR_ISSUE_NOT_FOUND`    | Parsed `issueNumber` does not exist in the repo.        | Stop before Stage 1. |
 | `ERR_STAGE_FAILED`        | A subagent reported `status: failed`.                   | Stop the pipeline at the failing stage; do not auto-retry past what that subagent's own rules allow. |
@@ -196,12 +211,50 @@ The concrete tool lists for each stage are intentionally deferred to
 Issues 2–5 so this file does not need to change every time a subagent's
 tool needs evolve.
 
-## 8. Out of scope for this issue
+## 8. Command registration
+
+This skill is kept in `skills/issue-to-pr/` as required by Issue 1. Claude
+Code, however, discovers project skills under `.claude/skills/<name>/SKILL.md`.
+`skills/` remains the **single source of truth**; `.claude/skills/issue-to-pr/`
+is a generated copy that must never be edited by hand.
+
+The copy is created and verified by the sync scripts in `scripts/`:
+
+```bash
+# PowerShell (Windows)
+powershell -ExecutionPolicy Bypass -File scripts/sync-claude-skills.ps1          # sync
+powershell -ExecutionPolicy Bypass -File scripts/sync-claude-skills.ps1 -Check   # verify only
+
+# Bash (Linux / macOS / Git Bash / CI)
+bash scripts/sync-claude-skills.sh                                               # sync
+bash scripts/sync-claude-skills.sh --check                                       # verify only
+```
+
+The check mode changes nothing and exits with code 1 when the copy is
+missing or out of date. Symlinks are deliberately not used, because they are
+unreliable on Windows unless Developer Mode / `core.symlinks` is guaranteed
+for the whole team.
+
+Still open and tracked in a follow-up issue (must be done before the
+end-to-end verification in Issue 6):
+
+- commit the generated `.claude/skills/issue-to-pr/` copy so that the
+  command works for everyone after `git pull`, and run the check mode in CI;
+- decide how the subagents in `agents/` are registered: Claude Code looks
+  for subagents in `.claude/agents/`, so either the orchestrator reads
+  `agents/*.md` and passes the content on as a prompt, or the sync scripts
+  also copy them into `.claude/agents/`;
+- once `rules/` contains files, add an explicit instruction to this file
+  telling the orchestrator to read all files in `rules/` before each stage.
+
+## 9. Out of scope for this issue
 
 - The actual content of `agents/architect-planner.md`,
   `agents/csharp-implementer.md`, `agents/qa-self-healing.md`,
   `agents/release-pr.md` (Issues 2–5).
 - Any files under `prompts/` and `rules/` beyond the placeholder
   (`.gitkeep`) needed to keep the empty directories under version control.
+- The open registration items listed in §8 (committing the generated copy,
+  CI check, subagent registration, instruction to read `rules/`).
 - End-to-end verification of the full routing/wiring between subagents —
   tracked as a follow-up check once Issues 2–5 land, before Issue 6.
