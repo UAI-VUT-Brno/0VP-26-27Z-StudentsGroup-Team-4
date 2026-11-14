@@ -34,17 +34,10 @@ feat/t3-<issueNumber>-<slug>
   4. truncate to at most 40 characters, then strip a trailing `-` left by
      truncation.
 - Example: issue `#21`, title *"Implement Issue Ingestion & Git Branching
-  Agent"* → `feat/t3-21-implement-issue-ingestion-git-branching-agent` → 40-char
-  truncation → `feat/t3-21-implement-issue-ingestion-git`.
-
-**Known limitation — please read before relying on CI:** `.github/workflows/ci.yml`
-currently triggers `push` builds only on `main`, `feature/**`, `fix/**` and
-`perf/**`. Branches named `feat/t3-**` do **not** match any of these globs, so
-a branch created by this pipeline will not trigger CI on push — only the
-`pull_request` trigger (against `main`) will run. Until `ci.yml` is updated to
-add `feat/**` (tracked as a follow-up — not part of this issue), do not treat
-"no CI run on push" as a sign that the Architect/Planner or C# Implementer
-stage failed.
+  Agent"* → slug `implement-issue-ingestion-git-branching` (the full slug
+  `implement-issue-ingestion-git-branching-agent` is cut to 40 characters, and
+  the trailing `-` left by the cut is stripped) →
+  `feat/t3-21-implement-issue-ingestion-git-branching`.
 
 ## 2. Commit message format
 
