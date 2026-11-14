@@ -170,7 +170,7 @@ On success:
     "otherSections": {},
     "warnings": []
   },
-  "branchName": "feat/t3-21-implement-issue-ingestion-git",
+  "branchName": "feat/t3-21-implement-issue-ingestion-git-branching",
   "labels": ["..."]
 }
 ```
@@ -210,16 +210,17 @@ matching the Description / Tool scope / Acceptance Criteria structure used
 throughout this repository's issues:
 
 1. `gh issue view 21 --json number,title,body,labels` → metadata fetched.
-2. Parse: `goal` = the `Description` text's first sentence region, `
-   requirements` = the bullet/sentence items under `Description` plus the
+2. Parse: `goal` = the `Description` text's first sentence region,
+   `requirements` = the bullet/sentence items under `Description` plus the
    `Tool scope` line kept as its own labeled item, `acceptanceCriteria` =
    the four bullets under `Acceptance Criteria`.
 3. `git status --porcelain` → empty → tree is clean.
 4. `slug` = `implement-issue-ingestion-git-branching-agent` → truncated to 40
-   chars → `implement-issue-ingestion-git`. `branchName` =
-   `feat/t3-21-implement-issue-ingestion-git`.
-5. `git branch --list feat/t3-21-implement-issue-ingestion-git` → no match.
-6. `git checkout -b feat/t3-21-implement-issue-ingestion-git` → branch
+   chars → `implement-issue-ingestion-git-branching` (trailing `-` from the
+   cut, if any, stripped). `branchName` =
+   `feat/t3-21-implement-issue-ingestion-git-branching`.
+5. `git branch --list feat/t3-21-implement-issue-ingestion-git-branching` → no match.
+6. `git checkout -b feat/t3-21-implement-issue-ingestion-git-branching` → branch
    created and checked out.
 7. Return `status: ok` with the plan and `branchName` above, handing off to
    Stage 2 (C# Implementer).

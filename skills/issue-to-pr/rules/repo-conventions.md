@@ -73,8 +73,7 @@ explain *why*, not *what* — the diff already shows what changed.
      why, written for a human reviewer, not restating the issue body verbatim.
   3. A **Testing** section listing how the change was verified (commands run,
      test names, manual checks).
-  4. Any relevant notes on scope limits, follow-ups, or known limitations
-     (e.g. the CI-trigger note in §1 above, when relevant).
+  4. Any relevant notes on scope limits, follow-ups, or known limitations.
 
 ## 4. Who must follow this file
 
