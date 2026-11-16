@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -26,11 +26,11 @@ namespace UAI.ZeroVP.Tests
         {
             // Aplikace běží se stejným logováním jako v provozu (včetně console loggeru),
             // aby měření odpovídalo realitě. Zápis do souboru ale přesměrujeme do Tempu.
-            _client = factory.WithWebHostBuilder(builder => 
+            _client = factory.WithWebHostBuilder(builder =>
             {
                 builder.RedirectLogsToTemp();
             }).CreateClient();
-            
+
             _output = output;
         }
 

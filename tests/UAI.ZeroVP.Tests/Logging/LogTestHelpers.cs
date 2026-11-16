@@ -183,14 +183,14 @@ public static class LogTestHelpers
         return builder.ConfigureAppConfiguration((context, config) =>
         {
             var tempPath = Path.Combine(Path.GetTempPath(), "ZeroVP_TestLogs");
-            
+
             // Pro jistotu rovnou složku vytvoříme
-            Directory.CreateDirectory(tempPath); 
-            
+            Directory.CreateDirectory(tempPath);
+
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 // TADY BYLA CHYBA: Musí to být Directory, ne Path!
-                { "FileLogging:Directory", tempPath } 
+                { "FileLogging:Directory", tempPath }
             });
         });
     }

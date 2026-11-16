@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -27,7 +27,7 @@ public class TodosUserFilterApiTests : IClassFixture<WebApplicationFactory<Progr
     public TodosUserFilterApiTests(WebApplicationFactory<Program> factory)
     {
         // Přesměrujeme logy pro test do dočasné složky
-        _client = factory.WithWebHostBuilder(builder => 
+        _client = factory.WithWebHostBuilder(builder =>
         {
             builder.RedirectLogsToTemp();
         }).CreateClient();

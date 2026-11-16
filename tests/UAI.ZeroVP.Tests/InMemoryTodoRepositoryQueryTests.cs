@@ -1,4 +1,4 @@
-using UAI.ZeroVP.Data.Entities;
+﻿using UAI.ZeroVP.Data.Entities;
 using UAI.ZeroVP.Data.InMemory;
 using UAI.ZeroVP.DTO;
 
@@ -16,13 +16,13 @@ public class InMemoryTodoRepositoryQueryTests
         TodoPriority priority = TodoPriority.Normal,
         bool isCompleted = false,
         int hoursAfterStart = 0) => new()
-    {
-        Id = Guid.NewGuid(),
-        Title = title,
-        Priority = priority,
-        IsCompleted = isCompleted,
-        CreatedAtUtc = Created.AddHours(hoursAfterStart)
-    };
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+            Priority = priority,
+            IsCompleted = isCompleted,
+            CreatedAtUtc = Created.AddHours(hoursAfterStart)
+        };
 
     [Fact]
     public async Task GetAllAsync_SortsByPriorityDescendingThenByCreatedTime()
