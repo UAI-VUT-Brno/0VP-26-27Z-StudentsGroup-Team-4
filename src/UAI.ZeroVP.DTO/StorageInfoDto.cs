@@ -1,4 +1,4 @@
-namespace UAI.ZeroVP.DTO;
+﻿namespace UAI.ZeroVP.DTO;
 
 /// <summary>
 /// Úložiště, které instance používá. Neobsahuje žádná tajemství – jen druh úložiště a cestu k souboru.

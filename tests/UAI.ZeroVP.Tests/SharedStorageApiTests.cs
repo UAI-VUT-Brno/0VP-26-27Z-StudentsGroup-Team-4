@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -52,10 +52,10 @@ public sealed class SharedStorageApiTests : IDisposable
 
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            // Přesměruje objemné logovací soubory z testovací instance do dočasné složky 
+            // Přesměruje objemné logovací soubory z testovací instance do dočasné složky
             // nezávisle na appsettings.json.
             builder.RedirectLogsToTemp();
-            
+
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings));
         });
 

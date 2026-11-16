@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,10 +18,10 @@ public sealed class InstanceStartupTests
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls(url);
-        
+
         // PŘIDÁNO: Přesměrujeme případné logy načtené z appsettings do dočasné složky
         builder.WebHost.RedirectLogsToTemp();
-        
+
         builder.Logging.ClearProviders();
 
         var app = builder.Build();

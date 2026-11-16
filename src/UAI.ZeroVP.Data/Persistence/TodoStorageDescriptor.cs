@@ -1,4 +1,4 @@
-namespace UAI.ZeroVP.Data.Persistence;
+﻿namespace UAI.ZeroVP.Data.Persistence;
 
 /// <summary>
 /// Popis úložiště, které instance právě používá. Neobsahuje žádná tajemství

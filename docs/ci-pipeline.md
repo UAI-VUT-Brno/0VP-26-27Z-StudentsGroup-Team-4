@@ -4,7 +4,7 @@ Repozitář používá GitHub Actions (`.github/workflows/ci.yml`). Pipeline se 
 
 | Job | Co dělá |
 |---|---|
-| `build-and-test` | Restore, build v konfiguraci Release a unit testy (bez kategorie `Performance`). |
+| `build-and-test` | Restore, kontrola formátování podle `.editorconfig` (`dotnet format --verify-no-changes`), build v konfiguraci Release a unit testy (bez kategorie `Performance`). |
 | `security-scan` | Bezpečnostní brána: spouští `scripts/security-scan.ps1`. Při jakémkoli nálezu job selže. |
 
 ## Bezpečnostní kontroly
@@ -24,6 +24,12 @@ Skript `scripts/security-scan.ps1` provádí tři kontroly. Lokálně i v CI se 
 - Skenuje zdrojové soubory i historii Gitu (v CI se klonuje celá historie, `fetch-depth: 0`).
 - Konfigurace: `.gitleaks.toml` rozšiřuje výchozí pravidla gitleaks (`useDefault = true`) a ignoruje složku `tests/`, kde jsou záměrně smyšlená data. Tajemství v testech se tedy nezachytí.
 - V CI se gitleaks stahuje v pevné verzi a ověřuje se jeho kontrolní součet. Skript se tam spouští s `-RequireGitleaks`, takže chybějící gitleaks je chyba.
+
+## Kontrola formátování
+
+Krok `Verify formatting` spouští `dotnet format UAI.ZeroVP.sln --verify-no-changes`. Selže, pokud některý `.cs` soubor porušuje `.editorconfig` (BOM, CRLF, odsazení, koncové mezery, závěrečný newline). Konce řádků na všech systémech sjednocuje `.gitattributes`.
+
+Lokální oprava: v čistém stromu spusť `dotnet format UAI.ZeroVP.sln` a výsledek zkontroluj v `git diff`.
 
 ## Závislosti: doporučení místo automatických PR
 

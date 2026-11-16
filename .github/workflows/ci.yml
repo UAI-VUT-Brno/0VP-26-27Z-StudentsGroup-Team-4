@@ -33,6 +33,9 @@ jobs:
       - name: Restore
         run: dotnet restore UAI.ZeroVP.sln
 
+      - name: Verify formatting (.editorconfig)
+        run: dotnet format UAI.ZeroVP.sln --verify-no-changes --no-restore
+
       - name: Build
         run: dotnet build UAI.ZeroVP.sln --configuration Release --no-restore
 

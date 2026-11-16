@@ -28,7 +28,7 @@ public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>
     public WeeklyTodosApiTests(WebApplicationFactory<Program> factory)
     {
         // Přesměruje logy z in-memory serveru pro tento test do Tempu
-        _client = factory.WithWebHostBuilder(builder => 
+        _client = factory.WithWebHostBuilder(builder =>
         {
             builder.RedirectLogsToTemp();
         }).CreateClient();

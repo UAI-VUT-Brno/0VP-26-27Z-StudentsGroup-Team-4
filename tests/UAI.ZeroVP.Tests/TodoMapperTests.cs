@@ -1,4 +1,4 @@
-using UAI.ZeroVP.API.Mapping;
+﻿using UAI.ZeroVP.API.Mapping;
 using UAI.ZeroVP.Data.Entities;
 using UAI.ZeroVP.DTO;
 
@@ -92,7 +92,7 @@ public class TodoMapperTests
         Assert.Equal("petr", entity.UserId);
     }
 
-        [Fact]
+    [Fact]
     public void ApplyTo_MissingUserId_KeepsUserId()
     {
         var entity = new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = Now, UserId = "anna" };
