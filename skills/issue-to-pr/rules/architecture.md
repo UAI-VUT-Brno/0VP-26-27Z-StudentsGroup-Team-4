@@ -9,7 +9,10 @@ description: >
 
 # Architecture Rules
 
-This file is read by the C# Implementer (`agents/csharp-implementer.md`) before it
+Paths in this file are from the repository root; the synchronized Claude copy lives
+under `.claude/skills/issue-to-pr/`.
+
+This file is read by the C# Implementer (`skills/issue-to-pr/agents/csharp-implementer.md`) before it
 writes or edits any file under `src/` or `tests/`. It describes how this
 repository is layered and what generated code must look like. It does **not**
 redefine commit conventions or formatting rules - it points to the files that own
@@ -20,12 +23,12 @@ them (see §1).
 | Topic | Owned by | Rule |
 |-------|----------|------|
 | Formatting, naming, style, encoding | `.editorconfig` (repository root) | Generated code MUST conform. It is never overridden, relaxed or worked around. |
-| Commit message format | `rules/repo-conventions.md` §2 | Every implementation commit MUST follow it (`feat:`, `test:`, `fix:` ...). |
+| Commit message format | `skills/issue-to-pr/rules/repo-conventions.md` §2 | Every implementation commit MUST follow it (`feat:`, `test:`, `fix:` ...). |
 
 - Read both files before the first edit. If they disagree with this file, they win.
 - Never copy their rules into new files; refer to them by name.
-- The conformance gate is `dotnet format --verify-no-changes` (§8). Code is **not
-  complete** until that command exits with code 0.
+- The conformance gate is `dotnet format --verify-no-changes` over the files the run
+  touched (§8). Code is **not complete** until that command exits with code 0.
 
 ## 2. Solution layout and dependency direction
 
@@ -141,7 +144,8 @@ Whenever an issue asks for protection against lost updates, use this pattern.
   `Mapping/TodoMapper` (extension methods). The mapper never copies `Version` from
   a request onto an entity - the repository increments it.
 - Every action documents each status code with `[ProducesResponseType]` **and** an
-  XML `<response code="...">` tag.
+  XML `<response code="...">` tag. Error codes (`400`, `404`, `409`) use
+  `typeof(ProblemDetails)` (`ValidationProblemDetails` for `400`).
 - Log through `LogEvents` constants (`Logging/LogEvents.cs`); add a new event id
   there instead of inlining numbers.
 
@@ -225,21 +229,29 @@ copy the style of the neighbouring file. Do not edit `.editorconfig` itself.
 
 ## 8. Definition of done
 
-Run in this order from the repository root; all must pass:
+Let `<files>` be every file this run created or changed. Run from the repository root,
+in this order; all must succeed:
 
 ```bash
+dotnet format UAI.ZeroVP.sln --include <files>
 dotnet build UAI.ZeroVP.sln --configuration Release
-dotnet format UAI.ZeroVP.sln --verify-no-changes
+dotnet format UAI.ZeroVP.sln --verify-no-changes --include <files>
 ```
 
-- If the format check reports a diff, fix the listed files by hand and run it again.
-  `dotnet format` without `--verify-no-changes` is **not** used by the agent.
+- The first command normalises (BOM, CRLF, indentation, final newline) **only** the
+  files of this run. `dotnet format` without `--include` is forbidden: it would
+  rewrite files outside the plan.
+- The gate judges **your** files, not the rest of the repository. A violation in an
+  untouched file is not yours to fix and does not fail the run; report it under
+  `warnings`.
+- Analyse failures by diagnostic id (`WHITESPACE`, `FINALNEWLINE`, `CHARSET`,
+  `ENDOFLINE`) and file path, never by message text (it is localised).
 - A failing build or format check blocks the commit. Nothing is committed until
-  both succeed.
+  all three commands succeed.
 
 ## 9. Commits during implementation
 
-- Format: exactly `rules/repo-conventions.md` §2 - a type prefix (`feat:`, `test:`,
+- Format: exactly `skills/issue-to-pr/rules/repo-conventions.md` §2 - a type prefix (`feat:`, `test:`,
   `fix:`), imperative, lowercase after the colon, subject <= 72 characters, issue
   number in parentheses, e.g. `feat: add optimistic concurrency to todo updates (#42)`.
 - `docs:` is not used by the implementer (it writes no documentation files).
