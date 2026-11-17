@@ -30,7 +30,8 @@ files) is loaded lazily by the relevant subagent, not by the orchestrator.
 ```text
 skills/issue-to-pr/
 ├── SKILL.md          # this file — orchestrator & routing logic (Issue 1)
-├── prompts/           # shared / reusable prompt fragments (populated in later issues)
+├── prompts/           # shared / reusable prompt fragments
+│                       #   failure-parsing.md          (Issue 4)
 ├── agents/             # one file per subagent: system prompt + scoped tool list
 │                       #   architect-planner.md      (Issue 2)
 │                       #   csharp-implementer.md     (Issue 3)
@@ -41,9 +42,13 @@ skills/issue-to-pr/
                         # constraints such as UTF-8-BOM, see .editorconfig)
 ```
 
-`prompts/`, `agents/` and `rules/` are intentionally empty for this issue
-(tracked via `.gitkeep`). They are populated by Issues 2–5 without requiring
-any further change to this file's routing logic.
+`agents/`, `rules/` and `prompts/` are populated by Issues 2–5 without
+requiring any change to this file's routing logic. Today `rules/` holds
+`repo-conventions.md` and `architecture.md`, `prompts/` holds
+`failure-parsing.md`, and `agents/` holds the Architect/Planner, C#
+Implementer and QA/Self-Healing definitions. `release-pr.md` (Issue 5) is
+still to come. Directories are no longer kept alive by `.gitkeep` once they
+contain a file.
 
 ## 3. Command syntax
 
@@ -136,6 +141,19 @@ later stage start if an earlier one reported a hard failure.
 | 2 | Implement            | **C# Implementer**           | Issue 3 — `agents/csharp-implementer.md`     | Turns the plan into code changes against `src/` (and matching tests under `tests/`).         |
 | 3 | Verify & self-heal    | **QA / Self-Healing**         | Issue 4 — `agents/qa-self-healing.md`         | Builds, runs tests/lint, attempts bounded automatic fixes on failure, re-verifies.           |
 | 4 | Release               | **Release / PR**              | Issue 5 — `agents/release-pr.md`               | Commits, pushes a branch, opens the pull request, links it back to the source issue.         |
+
+### Shared context: `rules/` and `prompts/`
+
+Before each stage starts, the orchestrator instructs the subagent to read
+
+- **every file in `rules/`** (cross-cutting rules, for example commit format and
+  layer boundaries), and
+- **the prompt fragments its own agent file names** from `prompts/` (for example
+  Stage 3 reads `prompts/failure-parsing.md`).
+
+The orchestrator does not load these files itself and does not copy their content
+into other prompts; it only makes sure the subagent reads them before acting. Which
+fragments a stage needs is owned by that stage's file under `agents/`.
 
 Handoff contract between stages (minimum, refined per-subagent in Issues
 2–5): each subagent receives the `issueNumber`, the repository context, and
@@ -244,17 +262,15 @@ end-to-end verification in Issue 6):
   for subagents in `.claude/agents/`, so either the orchestrator reads
   `agents/*.md` and passes the content on as a prompt, or the sync scripts
   also copy them into `.claude/agents/`;
-- once `rules/` contains files, add an explicit instruction to this file
-  telling the orchestrator to read all files in `rules/` before each stage.
 
 ## 9. Out of scope for this issue
 
 - The actual content of `agents/architect-planner.md`,
   `agents/csharp-implementer.md`, `agents/qa-self-healing.md`,
   `agents/release-pr.md` (Issues 2–5).
-- Any files under `prompts/` and `rules/` beyond the placeholder
-  (`.gitkeep`) needed to keep the empty directories under version control.
+- The content of the files under `prompts/` and `rules/`; they are owned by
+  Issues 2–5 (`rules/` and `prompts/failure-parsing.md` exist today).
 - The open registration items listed in §8 (committing the generated copy,
-  CI check, subagent registration, instruction to read `rules/`).
+  CI check, subagent registration).
 - End-to-end verification of the full routing/wiring between subagents —
   tracked as a follow-up check once Issues 2–5 land, before Issue 6.
