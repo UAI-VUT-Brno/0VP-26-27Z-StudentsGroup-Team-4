@@ -329,6 +329,15 @@ Zdrojové soubory jsou uloženy jako **UTF-8 s BOM**. Bez BOM dekóduje kompilá
 na Windows zdrojový kód systémovou ANSI kódovou stránkou a diakritika v řetězcích
 se rozbije. Pravidlo hlídá `.editorconfig` (`charset = utf-8-bom`).
 
+### Git blame bez formátovacích commitů
+
+Hromadné formátovací commity jsou uvedené v `.git-blame-ignore-revs`. GitHub ho používá
+automaticky, lokálně je potřeba jednou nastavit:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ## Výukové materiály k Dockeru
 
 Nad touto aplikací jsou postavené tři nezávislé case studies, každá o pěti příkladech.
