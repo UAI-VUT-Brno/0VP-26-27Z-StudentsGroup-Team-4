@@ -28,19 +28,27 @@ Message text is copied verbatim into the report, but no decision depends on it.
 
 ## 2. Compiler and analyzer diagnostics (`dotnet build`, and the build part of `dotnet test`)
 
-Line shape (MSBuild canonical format):
+Line shape (MSBuild canonical format). The position and the project suffix vary:
 
 ```text
 <path>(<line>,<col>): error <ID>: <message> [<project>.csproj]
+<path>(<line>,<col>,<endLine>,<endCol>): error <ID>: <message> [<project>.csproj]
+<path>(<line>): error <ID>: <message>
 ```
 
-Pattern: `^(?<file>.+?)\((?<line>\d+),(?<col>\d+)\): (?<sev>error|warning) (?<id>[A-Za-z]+\d+): (?<msg>.*?) \[(?<proj>[^\]]+\.csproj)\]$`
+Pattern (position `(line)`, `(line,col)` or `(line,col,endLine,endCol)`; the trailing `[project]` is optional):
+
+`^(?<file>.+?)\((?<line>\d+)(?:,(?<col>\d+)(?:,(?<endLine>\d+),(?<endCol>\d+))?)?\): (?<sev>error|warning) (?<id>[A-Za-z]+\d+): (?<msg>.*?)(?: \[(?<proj>[^\]]+\.csproj)\])?$`
+
+Lines with no file position (for example `CSC : error CS5001: ...` or `MSBUILD : error MSB1009: ...`) do not
+match; read them as `<origin> : error <ID>: <message>` with `file = null`. A record without a file can only be
+handled when the `[project]` suffix points into `src/` or `tests/`; otherwise it is out of scope.
 
 Rules:
 
 1. Only `error` lines matter. Ignore `warning` lines unless the same id also appears as an error.
 2. MSBuild prints each diagnostic more than once (once per target/project). Deduplicate on `(file, line, col, id)`.
-3. Convert the absolute path to a repository-relative one. A diagnostic whose file is not under `src/` or `tests/` is **out of scope** (the agent must not edit it).
+3. Convert the absolute path to a repository-relative one. A diagnostic whose file is not under `src/` or `tests/` is **out of scope** (the agent must not edit it). Keep `line` (and `col`) as informational data.
 4. Group by id family:
 
 | Id family | Meaning | Fixable by the agent? |
@@ -125,9 +133,13 @@ Take the dotted name after the first token of the line that is followed by
 
 ## 4. Fingerprint
 
-For every failure keep a fingerprint: `<id or test FQN> | <file> | <line>`. The agent compares
-fingerprints between runs to see which failures are new, fixed or unchanged (§ "Progress
-check" in the agent file).
+For every failure keep a fingerprint: `<id or test FQN> | <file>`. The line number is **not**
+part of it: a fix shifts lines, so a line-based key would make the same failure look new (or
+fixed). Keep `line` only as informational data for the report. If several records share one
+fingerprint (the same id several times in one file), also remember how many there are.
+
+The agent compares fingerprints between runs to see which failures are new, fixed or
+unchanged (§ "Progress check" in the agent file).
 
 ## 5. Output of this step
 
@@ -140,6 +152,7 @@ A list of failure records, ordered by the fix order of §2.5, then by test class
   "file": "src/UAI.ZeroVP.Data/InMemory/InMemoryTodoRepository.cs",
   "line": 58,
   "message": "<verbatim, first line>",
-  "suspect": "production | test"
+  "suspect": "production | test",
+  "fingerprint": "<id or test FQN> | <file>"
 }
 ```
