@@ -25,3 +25,4 @@ Dockerfile.*    text eol=lf
 *.env           text eol=lf
 compose.yaml    text eol=lf
 compose.*.yaml  text eol=lf
+.git-blame-ignore-revs text eol=lf
