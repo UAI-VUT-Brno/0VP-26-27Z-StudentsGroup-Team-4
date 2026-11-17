@@ -46,9 +46,8 @@ skills/issue-to-pr/
 requiring any change to this file's routing logic. Today `rules/` holds
 `repo-conventions.md` and `architecture.md`, `prompts/` holds
 `failure-parsing.md`, and `agents/` holds the Architect/Planner, C#
-Implementer and QA/Self-Healing definitions. `release-pr.md` (Issue 5) is
-still to come. Directories are no longer kept alive by `.gitkeep` once they
-contain a file.
+Implementer, QA/Self-Healing and Release/PR definitions. Directories are no
+longer kept alive by `.gitkeep` once they contain a file.
 
 ## 3. Command syntax
 
@@ -161,6 +160,11 @@ the previous stage's structured output; it returns a structured result plus
 a `status` of `ok` or `failed`. On `failed`, the orchestrator stops the
 pipeline, surfaces the subagent's reported reason to the user, and does not
 attempt the next stage automatically.
+
+Stage 4 is the exception to "previous stage's output only": it needs the plan
+(Stage 1), the commits (Stage 2) and the verification result (Stage 3), so the
+orchestrator passes it the results of Stages 1-3 together with `issueWasClosed`
+(from §4 step 8). See `agents/release-pr.md` §3.
 
 ```text
 /issue-to-pr <ref>
