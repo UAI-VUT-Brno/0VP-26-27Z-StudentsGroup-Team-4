@@ -59,8 +59,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $solution = 'UAI.ZeroVP.sln'
-$repoRoot = (& git rev-parse --show-toplevel).Trim()
-if ($LASTEXITCODE -ne 0) { throw 'Not inside a git repository.' }
+# git prints UTF-8; decode it as such so paths with diacritics (for example D:\Skola) survive.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $repoRoot
 if (-not (Test-Path $solution)) { throw "Run this script inside the repository ($solution not found in $repoRoot)." }
 
@@ -68,7 +69,7 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 function Invoke-Git {
     param([string[]]$GitArgs)
-    $output = & git @GitArgs
+    $output = & git -c core.quotepath=off @GitArgs
     if ($LASTEXITCODE -ne 0) { throw "git $($GitArgs -join ' ') failed with exit code $LASTEXITCODE." }
     return $output
 }
