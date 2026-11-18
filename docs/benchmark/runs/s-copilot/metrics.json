@@ -1,0 +1,135 @@
+{
+    "runId":  "s-copilot",
+    "collectedAt":  "2026-11-18T13:28:43.5328520+01:00",
+    "base":  "origin/main",
+    "mergeBase":  "8278659e150346e070c48e1a99d10becf4ca1d0c",
+    "head":  "9641d29819a13292453095fbfc1909b282ce7b5a",
+    "timing":  {
+                   "startedAt":  "2026-11-18T11:52:00.0000000+01:00",
+                   "endedAt":  "2026-11-18T11:15:07.0000000+00:00",
+                   "endedKind":  "pullRequestCreatedAt",
+                   "totalSeconds":  1387,
+                   "pullRequestUrl":  "https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/pull/66"
+               },
+    "commits":  {
+                    "count":  3,
+                    "fixCommitCount":  0,
+                    "note":  "fix: commit count is only a proxy for repair cycles; use the run record for M4.",
+                    "list":  [
+                                 {
+                                     "sha":  "73c1f00",
+                                     "committedAt":  "2026-11-18T13:18:35+01:00",
+                                     "subject":  "feat: add overdue todos query endpoint (#65)"
+                                 },
+                                 {
+                                     "sha":  "2bbc118",
+                                     "committedAt":  "2026-11-18T13:18:46+01:00",
+                                     "subject":  "test: add tests for overdue todos query (#65)"
+                                 },
+                                 {
+                                     "sha":  "9641d29",
+                                     "committedAt":  "2026-11-18T13:18:54+01:00",
+                                     "subject":  "docs: document overdue todos endpoint (#65)"
+                                 }
+                             ]
+                },
+    "editorConfig":  {
+                         "filesChecked":  10,
+                         "filesClean":  9,
+                         "adherencePercent":  90,
+                         "violations":  {
+                                            "ENDOFLINE":  0,
+                                            "WHITESPACE":  0,
+                                            "FINALNEWLINE":  1,
+                                            "CHARSET":  1
+                                        },
+                         "files":  [
+                                       {
+                                           "file":  "README.md",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.API/Controllers/TodosController.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.API/UAI.ZeroVP.API.http",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.Data/Abstractions/ITodoRepository.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.Data/InMemory/InMemoryTodoRepository.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.Data/Persistence/Sharedjsonfiletodorepository.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/InMemoryTodoRepositoryQueryTests.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/SharedJsonFileTodoRepositoryTests.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodosControllerUpdateTests.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodosOverdueApiTests.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       }
+                                   ],
+                         "dotnetFormat":  {
+                                              "ran":  true,
+                                              "exitCode":  0,
+                                              "passed":  true,
+                                              "diagnostics":  {
+
+                                                              }
+                                          }
+                     },
+    "verification":  {
+                         "ran":  true,
+                         "buildExitCode":  0,
+                         "testExitCode":  0,
+                         "total":  338,
+                         "passed":  338,
+                         "failed":  0
+                     }
+}
