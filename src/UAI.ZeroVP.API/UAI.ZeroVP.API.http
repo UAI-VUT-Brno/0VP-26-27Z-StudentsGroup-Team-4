@@ -19,6 +19,10 @@ Accept: application/json
 GET {{UAI.ZeroVP.API_HostAddress}}/api/todos?isCompleted=false
 Accept: application/json
 
+### Úkoly po termínu k určenému okamžiku (volitelně lze přidat &userId=anna)
+GET {{UAI.ZeroVP.API_HostAddress}}/api/todos/overdue?asOfUtc=2026-11-18T10:00:00Z
+Accept: application/json
+
 ### Nový úkol
 POST {{UAI.ZeroVP.API_HostAddress}}/api/todos
 Content-Type: application/json
