@@ -1,0 +1,138 @@
+{
+    "runId":  "test",
+    "collectedAt":  "2026-11-18T10:39:23.4532712+01:00",
+    "base":  "origin/main",
+    "mergeBase":  "dd9b0965ca7d2b654e137200410a0e700805ed85",
+    "head":  "5f1fd36bf9c4a4eeabfb694ce2ece5335195dedc",
+    "timing":  {
+                   "startedAt":  null,
+                   "endedAt":  null,
+                   "endedKind":  null,
+                   "totalSeconds":  null,
+                   "pullRequestUrl":  null
+               },
+    "commits":  {
+                    "count":  5,
+                    "fixCommitCount":  0,
+                    "note":  "fix: commit count is only a proxy for repair cycles; use the run record for M4.",
+                    "list":  [
+                                 {
+                                     "sha":  "0a7059d",
+                                     "committedAt":  "2026-11-18T10:15:52+01:00",
+                                     "subject":  "docs: add missing final newline to issue-to-pr files (#56)"
+                                 },
+                                 {
+                                     "sha":  "0e71af3",
+                                     "committedAt":  "2026-11-18T10:15:53+01:00",
+                                     "subject":  "docs: add benchmark methodology and synthetic issue (#56)"
+                                 },
+                                 {
+                                     "sha":  "c2c878f",
+                                     "committedAt":  "2026-11-18T10:15:54+01:00",
+                                     "subject":  "feat: add run metrics collection script (#56)"
+                                 },
+                                 {
+                                     "sha":  "cfbf338",
+                                     "committedAt":  "2026-11-18T10:15:55+01:00",
+                                     "subject":  "docs: add unattended run guide and run record template (#56)"
+                                 },
+                                 {
+                                     "sha":  "5f1fd36",
+                                     "committedAt":  "2026-11-18T10:15:56+01:00",
+                                     "subject":  "docs: add benchmark technical report draft (#56)"
+                                 }
+                             ]
+                },
+    "editorConfig":  {
+                         "filesChecked":  9,
+                         "filesClean":  8,
+                         "adherencePercent":  88.9,
+                         "violations":  {
+                                            "ENDOFLINE":  0,
+                                            "WHITESPACE":  0,
+                                            "FINALNEWLINE":  1,
+                                            "CHARSET":  0
+                                        },
+                         "files":  [
+                                       {
+                                           "file":  "docs/benchmark/methodology.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "docs/benchmark/run-record-template.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "docs/benchmark/synthetic-issue.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "docs/benchmark/technical-report.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "docs/benchmark/unattended-run.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "scripts/collect-run-metrics.ps1",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "skills/issue-to-pr/agents/architect-planner.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "skills/issue-to-pr/agents/release-pr.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "skills/issue-to-pr/rules/repo-conventions.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       }
+                                   ],
+                         "dotnetFormat":  {
+                                              "ran":  false,
+                                              "exitCode":  null,
+                                              "passed":  null,
+                                              "diagnostics":  {
+
+                                                              }
+                                          }
+                     },
+    "verification":  {
+                         "ran":  false,
+                         "buildExitCode":  null,
+                         "testExitCode":  null,
+                         "total":  null,
+                         "passed":  null,
+                         "failed":  null
+                     }
+}
