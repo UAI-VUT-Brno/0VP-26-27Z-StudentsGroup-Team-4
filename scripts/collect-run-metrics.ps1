@@ -27,6 +27,10 @@
 .PARAMETER PullRequest
   Pull request number; its creation time is read with "gh pr view".
 
+.PARAMETER EndedAt
+  Pull request creation time entered by hand (any format [DateTimeOffset]
+  parses). Takes precedence over "gh pr view"; use it when gh is not available.
+
 .PARAMETER Base
   Base ref for the diff. Defaults to origin/main.
 
@@ -47,6 +51,8 @@ param(
     [string]$StartedAt,
 
     [int]$PullRequest = 0,
+
+    [string]$EndedAt,
 
     [string]$Base = 'origin/main',
 
@@ -152,7 +158,11 @@ if ($StartedAt) {
     $timing.startedAt = $start.ToString('o')
 
     $end = $null
-    if ($PullRequest -gt 0) {
+    if ($EndedAt) {
+        $end = [DateTimeOffset]::Parse($EndedAt, $culture)
+        $timing.endedKind = 'pullRequestCreatedAt (entered manually with -EndedAt)'
+    }
+    if ($null -eq $end -and $PullRequest -gt 0) {
         if (Get-Command gh -ErrorAction SilentlyContinue) {
             $prJson = & gh pr view $PullRequest --json createdAt,url
             if ($LASTEXITCODE -eq 0) {
