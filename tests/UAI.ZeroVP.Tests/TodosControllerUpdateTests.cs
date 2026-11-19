@@ -122,6 +122,9 @@ public class TodosControllerUpdateTests
         public Task<IReadOnlyList<TodoItem>> GetAllAsync(bool? isCompleted = null, string? userId = null, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<TodoItem>>(new[] { _item });
 
+        public Task<IReadOnlyList<TodoItem>> GetOverdueAsync(DateTimeOffset asOfUtc, string? userId = null, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<TodoItem>>(Array.Empty<TodoItem>());
+
         public Task<TodoItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult<TodoItem?>(_item.Clone());
 

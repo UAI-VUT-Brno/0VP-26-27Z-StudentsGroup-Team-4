@@ -15,13 +15,17 @@ public class InMemoryTodoRepositoryQueryTests
         string title,
         TodoPriority priority = TodoPriority.Normal,
         bool isCompleted = false,
-        int hoursAfterStart = 0) => new()
+        int hoursAfterStart = 0,
+        DateTimeOffset? dueAtUtc = null,
+        string? userId = null) => new()
         {
             Id = Guid.NewGuid(),
             Title = title,
             Priority = priority,
             IsCompleted = isCompleted,
-            CreatedAtUtc = Created.AddHours(hoursAfterStart)
+            CreatedAtUtc = Created.AddHours(hoursAfterStart),
+            DueAtUtc = dueAtUtc,
+            UserId = userId
         };
 
     [Fact]
@@ -53,6 +57,25 @@ public class InMemoryTodoRepositoryQueryTests
         Assert.Single(completed);
         Assert.Equal(2, open.Count);
         Assert.Equal(3, all.Count);
+    }
+
+    [Fact]
+    public async Task GetOverdueAsync_FiltersByUserAndStrictDueDate_AndOrdersByDueDateThenPriority()
+    {
+        var repository = CreateEmptyRepository();
+        var asOfUtc = new DateTimeOffset(2026, 1, 16, 12, 0, 0, TimeSpan.Zero);
+        var user = "anna";
+        await repository.AddAsync(CreateItem("Later", TodoPriority.High, dueAtUtc: asOfUtc.AddSeconds(-1), userId: user));
+        await repository.AddAsync(CreateItem("Earlier low", TodoPriority.Low, dueAtUtc: asOfUtc.AddSeconds(-2), userId: user));
+        await repository.AddAsync(CreateItem("Earlier high", TodoPriority.High, dueAtUtc: asOfUtc.AddSeconds(-2), userId: user));
+        await repository.AddAsync(CreateItem("Exactly due", dueAtUtc: asOfUtc, userId: user));
+        await repository.AddAsync(CreateItem("Completed", isCompleted: true, dueAtUtc: asOfUtc.AddDays(-1), userId: user));
+        await repository.AddAsync(CreateItem("No due date", userId: user));
+        await repository.AddAsync(CreateItem("Other user", dueAtUtc: asOfUtc.AddDays(-1), userId: "petr"));
+
+        var result = await repository.GetOverdueAsync(asOfUtc, user);
+
+        Assert.Equal(new[] { "Earlier high", "Earlier low", "Later" }, result.Select(item => item.Title));
     }
 
     [Fact]

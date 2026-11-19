@@ -55,6 +55,29 @@ public sealed class TodosController : ControllerBase
         return Ok(items.Select(item => item.ToDto()).ToList());
     }
 
+    /// <summary>Vrátí nedokončené úkoly s termínem před zadaným časem.</summary>
+    /// <param name="asOfUtc">Referenční čas s offsetem; při vynechání se použije aktuální UTC čas.</param>
+    /// <param name="userId">Identifikátor uživatele; vynechání znamená bez filtru.</param>
+    /// <param name="cancellationToken">Token pro zrušení operace.</param>
+    /// <response code="200">Nedokončené úkoly po termínu, seřazené podle termínu a priority.</response>
+    /// <response code="400">Hodnota parametru <c>asOfUtc</c> není platné datum a čas.</response>
+    [HttpGet("overdue")]
+    [ProducesResponseType(typeof(IReadOnlyList<TodoItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<TodoItemDto>>> GetOverdue(
+        [FromQuery] DateTimeOffset? asOfUtc,
+        [FromQuery] string? userId,
+        CancellationToken cancellationToken)
+    {
+        var userIdFilter = userId is null && Request?.Query.ContainsKey("userId") == true
+            ? string.Empty
+            : userId;
+        var referenceTime = asOfUtc ?? _timeProvider.GetUtcNow();
+        var items = await _repository.GetOverdueAsync(referenceTime, userIdFilter, cancellationToken);
+
+        return Ok(items.Select(item => item.ToDto()).ToList());
+    }
+
     /// <summary>Vrátí jeden úkol podle identifikátoru.</summary>
     /// <response code="200">Nalezený úkol.</response>
     /// <response code="404">Úkol se zadaným identifikátorem neexistuje.</response>

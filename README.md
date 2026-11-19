@@ -123,6 +123,7 @@ Port žádná část kódu nepředepisuje – určuje ho konfigurace (viz [Více
 | Metoda | Cesta | Popis |
 |---|---|---|
 | `GET` | `/api/todos` | Seznam úkolů; volitelné filtry `?isCompleted=true\|false` a `?userId=anna` |
+| `GET` | `/api/todos/overdue` | Nedokončené úkoly s termínem před aktuálním UTC časem; volitelné `?asOfUtc=2026-11-18T10:00:00Z` a `?userId=anna`; řazení podle termínu vzestupně a priority sestupně |
 | `GET` | `/api/todos/{id}` | Detail úkolu |
 | `POST` | `/api/todos` | Založení úkolu → `201 Created` + hlavička `Location` |
 | `POST` | `/api/todos/repeat` | Creates a weekly sequence of the same task (`repeatCount` + 1 tasks, seven days apart) → `201 Created` + list of tasks, see [docs/weekly-recurring-todos.md](docs/weekly-recurring-todos.md) |

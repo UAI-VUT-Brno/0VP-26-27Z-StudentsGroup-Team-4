@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using UAI.ZeroVP.Data.Entities;
 using UAI.ZeroVP.Data.InMemory;
 using UAI.ZeroVP.Data.Persistence;
+using UAI.ZeroVP.DTO;
 using UAI.ZeroVP.Tests.Logging;
 
 namespace UAI.ZeroVP.Tests;
@@ -37,14 +38,21 @@ public sealed class SharedJsonFileTodoRepositoryTests : IDisposable
             TimeProvider.System,
             logger);
 
-    private static TodoItem NewItem(string title, string? userId = null, bool isCompleted = false) =>
+    private static TodoItem NewItem(
+        string title,
+        string? userId = null,
+        bool isCompleted = false,
+        DateTimeOffset? dueAtUtc = null,
+        TodoPriority priority = TodoPriority.Normal) =>
         new()
         {
             Id = Guid.NewGuid(),
             Title = title,
             CreatedAtUtc = DateTimeOffset.UtcNow,
             UserId = userId,
-            IsCompleted = isCompleted
+            IsCompleted = isCompleted,
+            DueAtUtc = dueAtUtc,
+            Priority = priority
         };
 
     private int TasksInFile() => JsonDocument.Parse(File.ReadAllText(FilePath)).RootElement.GetArrayLength();
@@ -107,6 +115,24 @@ public sealed class SharedJsonFileTodoRepositoryTests : IDisposable
         Assert.Equal(2, (await repository.GetAllAsync(userId: "anna")).Count);
         Assert.Single(await repository.GetAllAsync(isCompleted: true, userId: "anna"));
         Assert.Equal(2, (await repository.GetAllAsync(isCompleted: false)).Count);
+    }
+
+    [Fact]
+    public async Task GetOverdue_FiltersByUserAndStrictDueDate_AndOrdersByDueDateThenPriority()
+    {
+        var repository = Create();
+        var asOfUtc = new DateTimeOffset(2026, 1, 16, 12, 0, 0, TimeSpan.Zero);
+        await repository.AddAsync(NewItem("later", "anna", dueAtUtc: asOfUtc.AddSeconds(-1)));
+        await repository.AddAsync(NewItem("earlier low", "anna", dueAtUtc: asOfUtc.AddSeconds(-2), priority: TodoPriority.Low));
+        await repository.AddAsync(NewItem("earlier high", "ANNA", dueAtUtc: asOfUtc.AddSeconds(-2), priority: TodoPriority.High));
+        await repository.AddAsync(NewItem("exactly due", "anna", dueAtUtc: asOfUtc));
+        await repository.AddAsync(NewItem("completed", "anna", isCompleted: true, dueAtUtc: asOfUtc.AddDays(-1)));
+        await repository.AddAsync(NewItem("no due date", "anna"));
+        await repository.AddAsync(NewItem("other user", "petr", dueAtUtc: asOfUtc.AddDays(-1)));
+
+        var result = await repository.GetOverdueAsync(asOfUtc, "anna");
+
+        Assert.Equal(new[] { "earlier high", "earlier low", "later" }, result.Select(item => item.Title));
     }
 
     [Fact]

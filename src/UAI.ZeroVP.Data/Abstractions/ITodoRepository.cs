@@ -10,6 +10,9 @@ public interface ITodoRepository
     /// <summary>Vrátí všechny úkoly, volitelně filtrované podle stavu dokončení a uživatele.</summary>
     Task<IReadOnlyList<TodoItem>> GetAllAsync(bool? isCompleted = null, string? userId = null, CancellationToken cancellationToken = default);
 
+    /// <summary>Vrátí nedokončené úkoly s termínem před zadaným časem, volitelně filtrované podle uživatele.</summary>
+    Task<IReadOnlyList<TodoItem>> GetOverdueAsync(DateTimeOffset asOfUtc, string? userId = null, CancellationToken cancellationToken = default);
+
     /// <summary>Vrátí úkol podle identifikátoru, nebo <c>null</c> pokud neexistuje.</summary>
     Task<TodoItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
