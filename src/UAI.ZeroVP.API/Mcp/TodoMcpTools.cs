@@ -54,7 +54,8 @@ public sealed class TodoMcpTools
         string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var items = await _repository.GetAllAsync(isCompleted, userId, cancellationToken);
+        // Trim so a padded value such as "  anna  " still matches the stored (already-trimmed) user ID.
+        var items = await _repository.GetAllAsync(isCompleted, userId?.Trim(), cancellationToken);
 
         return JsonSerializer.Serialize(items.Select(item => item.ToDto()).ToList(), JsonOptions);
     }

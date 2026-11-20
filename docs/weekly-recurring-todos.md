@@ -16,6 +16,7 @@ tasks: the first one and three more.
   "title": "Weekly status report",
   "description": "Send the status report to the team.",
   "priority": "Normal",
+  "userId": "anna",
   "firstDueAtUtc": "2026-11-02T09:00:00Z",
   "repeatCount": 3
 }
@@ -47,6 +48,7 @@ tasks: the first one and three more.
     "isCompleted": false,
     "createdAtUtc": "2026-10-23T10:15:00+00:00",
     "completedAtUtc": null,
+    "userId": "anna",
     "dueAtUtc": "2026-11-02T09:00:00+00:00"
   },
   {
@@ -57,6 +59,7 @@ tasks: the first one and three more.
     "isCompleted": false,
     "createdAtUtc": "2026-10-23T10:15:00+00:00",
     "completedAtUtc": null,
+    "userId": "anna",
     "dueAtUtc": "2026-11-09T09:00:00+00:00"
   }
 ]
@@ -116,7 +119,7 @@ never changes its due date.
 ```bash
 curl -X POST http://localhost:5258/api/todos/repeat \
   -H "Content-Type: application/json" \
-  -d '{"title":"Weekly status report","priority":"Normal","firstDueAtUtc":"2026-11-02T09:00:00Z","repeatCount":3}'
+  -d '{"title":"Weekly status report","priority":"Normal","userId":"anna","firstDueAtUtc":"2026-11-02T09:00:00Z","repeatCount":3}'
 ```
 
 Ready-made requests (valid and invalid) are in `src/UAI.ZeroVP.API/UAI.ZeroVP.API.http`.
