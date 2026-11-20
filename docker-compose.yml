@@ -44,6 +44,11 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - Swagger__Enabled=true
       - Todo__SeedSampleData=true
+      # appsettings.Development.json turns the unauthenticated /mcp endpoint on (Mcp:Enabled=true).
+      # ASPNETCORE_ENVIRONMENT=Development above makes that file apply here too, so it must be turned
+      # back off explicitly - otherwise every replica behind nginx would expose /mcp with no
+      # authentication. See docs/mcp.md for how to opt in locally if you need it.
+      - Mcp__Enabled=false
       # Sdílené úložiště: jeden JSON soubor na svazku, všechny repliky stejná cesta.
       - JsonPersistence__Enabled=true
       - JsonPersistence__Shared=true

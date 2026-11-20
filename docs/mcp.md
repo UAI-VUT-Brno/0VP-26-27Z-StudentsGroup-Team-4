@@ -50,11 +50,25 @@ The endpoint is mapped only when the setting `Mcp:Enabled` is `true`.
 | Environment | `Mcp:Enabled` | Where it comes from |
 |---|---|---|
 | Development (`dotnet run`, launch profiles `http` / `https`) | `true` | `appsettings.Development.json` |
-| Production, Docker, `docker compose` | `false` | `appsettings.json` |
+| Production (no `ASPNETCORE_ENVIRONMENT` override) | `false` | `appsettings.json` |
+| `docker-compose.yml` (`api` service) | `false` | explicit `Mcp__Enabled=false` in `docker-compose.yml`, **not** `appsettings.json` |
 
 You can override it with an environment variable, for example `Mcp__Enabled=true` (or `false` to turn it
 off in Development). When the endpoint is enabled, the application writes a warning to the log at
 startup. When it is disabled, `/mcp` answers `404` like any unknown route.
+
+> **Why `docker-compose.yml` needs its own explicit override.** `docker-compose.yml` sets
+> `ASPNETCORE_ENVIRONMENT=Development` on the `api` service (so it also gets `Swagger__Enabled=true`
+> and `Todo__SeedSampleData=true` for local testing). That means `appsettings.Development.json` - not
+> `appsettings.json` - applies, and it turns `Mcp:Enabled` **on**. Without an explicit
+> `Mcp__Enabled=false` in `docker-compose.yml`, every `api` replica behind `nginx` would serve the
+> unauthenticated `/mcp` endpoint on the published gateway port. `docker-compose.yml` therefore sets
+> `Mcp__Enabled=false` itself; do not remove that line.
+>
+> To opt in locally for testing (for example with MCP Inspector against the Compose stack), add
+> `Mcp__Enabled=true` back to the `api` service's `environment:` in your own copy of
+> `docker-compose.yml` (or an override file) - never in a shared/committed config, and never on a
+> deployment reachable from outside your machine.
 
 ## Run it locally
 
@@ -115,6 +129,13 @@ The client should call `list_todos` / `get_todo`.
 120 tasks through the REST API, connects with the official MCP client over HTTP, lists the tools and calls
 each of them (all filters, a missing task, an invalid ID). `McpDisabledByDefaultTests` checks that `/mcp`
 does not exist when `Mcp:Enabled` is not set.
+
+`DockerComposeStaticConfigurationTests` reads `docker-compose.yml` itself and fails if the `api`
+service's explicit `Mcp__Enabled=false` override (see above) is ever removed or typo'd, without needing
+Docker. `DockerComposeMcpBehaviorTests` starts the real API with the same effective environment variables
+the `api` service runs with (`ASPNETCORE_ENVIRONMENT=Development` plus its overrides, including
+`Mcp__Enabled=false`) and checks that `/mcp` still answers `404` while the REST API keeps working - this
+is the regression test for 0VP-T4-F10.
 
 ```powershell
 dotnet test --filter "Category=Mcp"
