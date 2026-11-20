@@ -60,9 +60,60 @@ public sealed class TodosOverdueApiTests : IClassFixture<WebApplicationFactory<P
         using var response = await _client.GetAsync($"{Url}?asOfUtc=not-a-date");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(JsonOptions);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>(JsonOptions);
         Assert.NotNull(problem);
         Assert.Equal(StatusCodes.Status400BadRequest, problem.Status);
+    }
+
+    [Fact]
+    public async Task GetOverdue_AsOfUtcWithoutOffset_ReturnsValidationProblemDetails()
+    {
+        // "2026-11-18T10:00:00" is a valid ISO 8601 date and time, but without an explicit
+        // offset it would otherwise be silently interpreted in the server's local timezone.
+        using var response = await _client.GetAsync($"{Url}?asOfUtc=2026-11-18T10:00:00");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>(JsonOptions);
+        Assert.NotNull(problem);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.Status);
+        Assert.Contains("asOfUtc", problem.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task GetOverdue_EmptyAsOfUtc_ReturnsValidationProblemDetails()
+    {
+        using var response = await _client.GetAsync($"{Url}?asOfUtc=");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>(JsonOptions);
+        Assert.NotNull(problem);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.Status);
+        Assert.Contains("asOfUtc", problem.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task GetOverdue_EmptyUserId_Returns200WithEmptyList()
+    {
+        var userId = $"overdue-{Guid.NewGuid():N}";
+        await AddTaskAsync("Someone's task", userId, DateTimeOffset.UtcNow.AddDays(-1));
+        await AddTaskAsync("Task without owner", null, DateTimeOffset.UtcNow.AddDays(-1));
+
+        using var response = await _client.GetAsync($"{Url}?userId=");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = (await response.Content.ReadFromJsonAsync<List<TodoItemDto>>(JsonOptions))!;
+        Assert.Empty(result);
+    }
+
+    [Theory]
+    [InlineData("2026-11-18T10:00:00Z")]
+    [InlineData("2026-11-18T10:00:00+00:00")]
+    [InlineData("2026-11-18T12:00:00+02:00")]
+    public async Task GetOverdue_AsOfUtcWithExplicitOffset_ReturnsOk(string asOfUtc)
+    {
+        using var response = await _client.GetAsync($"{Url}?asOfUtc={Uri.EscapeDataString(asOfUtc)}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     private Task<TodoItem> AddTaskAsync(
