@@ -65,6 +65,12 @@ dotnet run --project src/UAI.ZeroVP.API --launch-profile http
 The MCP endpoint is then at `http://localhost:5258/mcp`. In Development the application seeds sample
 tasks (`Todo:SeedSampleData`), so there is something to list.
 
+> **No sample data shown?** Seeding only happens when the data file does not exist yet. If
+> `data/todos.json` already exists from an earlier run (with different, or no, matching tasks),
+> seeding is skipped and `list_todos` / `get_todo` only see what is already in that file. Delete or
+> rename `data/todos.json` (or point `JsonPersistence__FilePath` at a fresh path) before starting if
+> you want the sample tasks back.
+
 ## Manual check with MCP Inspector
 
 [MCP Inspector](https://github.com/modelcontextprotocol/inspector) needs Node.js.
@@ -92,6 +98,12 @@ Start the API first. The exact configuration depends on the version of the clien
   }
 }
 ```
+
+> **Newer Copilot versions.** Recent GitHub Copilot releases look for a workspace-level `.mcp.json`
+> at the repository root instead of (or in addition to) `.vscode/mcp.json`; check Copilot's own docs
+> for the exact file your installed version expects. `.mcp.json` is listed in this repository's
+> `.gitignore`, since it is a local dev convenience file and not something the project configures
+> centrally - if your client created it, it will not show up as an untracked change to commit.
 
 **Gemini CLI** - add the server with `gemini mcp add --transport http todo-api http://localhost:5258/mcp`
 or put it into `~/.gemini/settings.json`:
@@ -128,3 +140,9 @@ The API must be built first (a normal `dotnet build` or `dotnet test` does that)
 - Read-only on purpose: writing tools would need authorization and a stricter input validation.
 - `list_todos` returns all matching tasks without paging; it is meant for test data of a reasonable size.
 - The server is stateless: each request stands on its own and the server never calls the client back.
+- `list_todos`'s optional arguments (`isCompleted`, `userId`) are exposed in their JSON input schema as
+  nullable types, e.g. `"type": ["boolean", "null"]` / `"type": ["string", "null"]`, to represent "may be
+  omitted". This is valid JSON Schema, but some stricter MCP clients (older tooling that assumes
+  OpenAPI-3.0-style single-type schemas) emit a portability warning or reject the type array outright.
+  If you hit this with a given client, check whether it supports a newer JSON Schema draft or has a
+  compatibility flag; it does not affect the SDK-generated schema correctness itself.
