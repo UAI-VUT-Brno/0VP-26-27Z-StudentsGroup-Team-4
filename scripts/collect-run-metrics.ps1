@@ -187,7 +187,7 @@ else {
 }
 
 # --------------------------------------------------- changed files + M5a ---
-$changed = @(Invoke-Git @('diff', '--name-only', '--diff-filter=AM', "$mergeBase...HEAD") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+$changed = @(Invoke-Git @('diff', '--name-only', '--diff-filter=AMR', "$mergeBase...HEAD") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
 $fileResults = @()
 $totals = @{ FINALNEWLINE = 0; ENDOFLINE = 0; CHARSET = 0; WHITESPACE = 0 }
