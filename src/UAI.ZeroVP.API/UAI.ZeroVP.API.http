@@ -19,8 +19,12 @@ Accept: application/json
 GET {{UAI.ZeroVP.API_HostAddress}}/api/todos?isCompleted=false
 Accept: application/json
 
-### Úkoly po termínu k určenému okamžiku (volitelně lze přidat &userId=anna)
-GET {{UAI.ZeroVP.API_HostAddress}}/api/todos/overdue?asOfUtc=2026-11-18T10:00:00Z
+### Jen úkoly uživatele anna ("My Tasks"); userId se ořezává, takže funguje i s mezerami kolem
+GET {{UAI.ZeroVP.API_HostAddress}}/api/todos?userId=anna
+Accept: application/json
+
+### Úkoly po termínu k určenému okamžiku, jen pro uživatele anna
+GET {{UAI.ZeroVP.API_HostAddress}}/api/todos/overdue?asOfUtc=2026-11-18T10:00:00Z&userId=anna
 Accept: application/json
 
 ### Nový úkol
@@ -31,6 +35,17 @@ Content-Type: application/json
   "title": "Vyzkoušet docker build",
   "description": "Postavit image z vícefázového Dockerfile.",
   "priority": "High"
+}
+
+### Nový úkol s vlastníkem (userId); vynechání znamená bez vlastníka
+POST {{UAI.ZeroVP.API_HostAddress}}/api/todos
+Content-Type: application/json
+
+{
+  "title": "Napsat týdenní report",
+  "description": "Shrnutí uplynulého týdne pro tým.",
+  "priority": "Normal",
+  "userId": "anna"
 }
 
 ### Neplatný vstup – vrátí 400 s ValidationProblemDetails
@@ -50,6 +65,7 @@ Content-Type: application/json
   "title": "Weekly status report",
   "description": "Send the status report to the team.",
   "priority": "Normal",
+  "userId": "anna",
   "firstDueAtUtc": "2026-11-02T09:00:00Z",
   "repeatCount": 3
 }
