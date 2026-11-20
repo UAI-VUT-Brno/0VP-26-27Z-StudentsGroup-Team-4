@@ -79,4 +79,35 @@ public class RequestValidationBoundaryTests
 
         Assert.False(IsValid(request));
     }
+
+    [Fact]
+    public void UpdateRequest_UserId200Characters_IsValid()
+    {
+        var request = new UpdateTodoItemRequest { Title = "A", UserId = new string('u', 200) };
+
+        Assert.True(IsValid(request));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateRequest_BlankOrWhitespaceUserId_IsValid(string userId)
+    {
+        // Unlike Title, UserId has no [Required]: a blank value passes validation here and is
+        // normalized later by UpdateTodoItemRequestExtensions.ApplyTo (it leaves the stored UserId
+        // unchanged rather than clearing it - see 0VP-T4-F13 for making an explicit clear possible).
+        var request = new UpdateTodoItemRequest { Title = "A", UserId = userId };
+
+        Assert.True(IsValid(request));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CreateRequest_BlankOrWhitespaceUserId_IsValid(string userId)
+    {
+        var request = new CreateTodoItemRequest { Title = "A", UserId = userId };
+
+        Assert.True(IsValid(request));
+    }
 }

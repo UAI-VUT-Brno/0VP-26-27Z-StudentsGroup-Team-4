@@ -113,6 +113,22 @@ public class WeeklyRequestValidationTests
     }
 
     [Fact]
+    public void UserId_Exactly200Characters_IsValid()
+    {
+        var request = ValidRequest() with { UserId = new string('u', 200) };
+
+        Assert.Empty(Validate(request));
+    }
+
+    [Fact]
+    public void UserId_LongerThan200Characters_IsInvalid()
+    {
+        var request = ValidRequest() with { UserId = new string('u', 201) };
+
+        Assert.True(Mentions(Validate(request), nameof(CreateWeeklyTodoItemsRequest.UserId)));
+    }
+
+    [Fact]
     public void Priority_UnknownValue_IsInvalid()
     {
         var request = ValidRequest() with { Priority = (TodoPriority)99 };
