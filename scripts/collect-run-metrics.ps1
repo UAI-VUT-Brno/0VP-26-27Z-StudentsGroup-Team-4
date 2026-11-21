@@ -63,6 +63,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+# PowerShell 7.4+ can turn a non-zero exit code of a native command into an error; the exit codes
+# of dotnet format, build and test are data for this script, not failures of the script itself.
+$PSNativeCommandUseErrorActionPreference = $false
 
 $solution = 'UAI.ZeroVP.sln'
 # git prints UTF-8; decode it as such so paths with diacritics (for example D:\Skola) survive.
@@ -78,6 +81,29 @@ function Invoke-Git {
     $output = & git -c core.quotepath=off @GitArgs
     if ($LASTEXITCODE -ne 0) { throw "git $($GitArgs -join ' ') failed with exit code $LASTEXITCODE." }
     return $output
+}
+
+# Runs a native command and returns its exit code and combined stdout/stderr text.
+# Never throws on a non-zero exit code (or on text written to stderr): a failing
+# dotnet format, build or test is a measurement result, not a reason to stop.
+function Invoke-Native {
+    param([string]$FilePath, [string[]]$Arguments)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $lines = @(& $FilePath @Arguments 2>&1 | ForEach-Object { $_.ToString() })
+        $exitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $previous }
+    return [pscustomobject]@{ ExitCode = $exitCode; Output = ($lines -join "`n") }
+}
+
+# Last lines of a text, to keep the reason of a failure in metrics.json.
+function Get-Tail {
+    param([string]$Text, [int]$Count = 30)
+    $all = @($Text -split "`r?`n" | Where-Object { $_.Trim() })
+    if ($all.Count -le $Count) { return ($all -join "`n") }
+    return (($all | Select-Object -Last $Count) -join "`n")
 }
 
 # Expected line ending per file, mirroring .editorconfig and .gitattributes.
@@ -187,7 +213,7 @@ else {
 }
 
 # --------------------------------------------------- changed files + M5a ---
-$changed = @(Invoke-Git @('diff', '--name-only', '--diff-filter=AM', "$mergeBase...HEAD") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+$changed = @(Invoke-Git @('diff', '--name-only', '--diff-filter=AMR', "$mergeBase...HEAD") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
 $fileResults = @()
 $totals = @{ FINALNEWLINE = 0; ENDOFLINE = 0; CHARSET = 0; WHITESPACE = 0 }
@@ -218,10 +244,12 @@ if (-not $SkipFormat) {
     $formatFiles = @($changed | Where-Object { ($_ -like 'src/*' -or $_ -like 'tests/*') -and (Test-Path -LiteralPath $_) })
     if ($formatFiles.Count -gt 0) {
         $formatArgs = @('format', $solution, '--verify-no-changes', '--no-restore', '--include') + $formatFiles
-        $formatOutput = (& dotnet @formatArgs 2>&1 | Out-String)
+        $formatRun = Invoke-Native -FilePath 'dotnet' -Arguments $formatArgs
+        $formatOutput = $formatRun.Output
         $formatResult.ran = $true
-        $formatResult.exitCode = $LASTEXITCODE
-        $formatResult.passed = ($LASTEXITCODE -eq 0)
+        $formatResult.exitCode = $formatRun.ExitCode
+        $formatResult.passed = ($formatRun.ExitCode -eq 0)
+        if ($formatRun.ExitCode -ne 0) { $formatResult.outputTail = Get-Tail -Text $formatOutput }
         # Count diagnostic ids only; the message text is localized and never parsed.
         foreach ($m in [regex]::Matches($formatOutput, '\): (?:error|warning) (?<id>[A-Za-z0-9_]+):')) {
             $id = $m.Groups['id'].Value
@@ -235,14 +263,16 @@ if (-not $SkipFormat) {
 $verification = [ordered]@{ ran = $false; buildExitCode = $null; testExitCode = $null; total = $null; passed = $null; failed = $null }
 if (-not $SkipTests) {
     $verification.ran = $true
-    & dotnet build $solution --configuration Release | Out-Null
-    $verification.buildExitCode = $LASTEXITCODE
-    if ($LASTEXITCODE -eq 0) {
+    $buildRun = Invoke-Native -FilePath 'dotnet' -Arguments @('build', $solution, '--configuration', 'Release')
+    $verification.buildExitCode = $buildRun.ExitCode
+    if ($buildRun.ExitCode -ne 0) { $verification.buildOutputTail = Get-Tail -Text $buildRun.Output }
+    if ($buildRun.ExitCode -eq 0) {
         $resultsDir = Join-Path ([System.IO.Path]::GetTempPath()) ("benchmark-" + [guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $resultsDir | Out-Null
-        & dotnet test $solution --configuration Release --no-build --filter 'Category!=Performance' `
-            --logger 'trx;LogFileName=metrics.trx' --results-directory $resultsDir | Out-Null
-        $verification.testExitCode = $LASTEXITCODE
+        $testRun = Invoke-Native -FilePath 'dotnet' -Arguments @('test', $solution, '--configuration', 'Release', '--no-build',
+            '--filter', 'Category!=Performance', '--logger', 'trx;LogFileName=metrics.trx', '--results-directory', $resultsDir)
+        $verification.testExitCode = $testRun.ExitCode
+        if ($testRun.ExitCode -ne 0) { $verification.testOutputTail = Get-Tail -Text $testRun.Output }
         $trx = Get-ChildItem -Path $resultsDir -Filter '*.trx' -Recurse | Select-Object -First 1
         if ($null -ne $trx) {
             [xml]$trxXml = Get-Content -LiteralPath $trx.FullName -Raw
