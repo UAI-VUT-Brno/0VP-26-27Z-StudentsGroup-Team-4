@@ -43,6 +43,24 @@ public class TodoPersistenceUnitTests
             WriteCount++;
             return Task.CompletedTask;
         }
+
+        /// <summary>When set, <see cref="Copy"/> throws it (simulates a failed backup).</summary>
+        public Exception? CopyFailure { get; set; }
+
+        public void Copy(string sourcePath, string destinationPath)
+        {
+            if (CopyFailure is not null)
+            {
+                throw CopyFailure;
+            }
+
+            if (Files.ContainsKey(destinationPath))
+            {
+                throw new IOException($"File '{destinationPath}' already exists.");
+            }
+
+            Files[destinationPath] = Files[sourcePath];
+        }
     }
 
     private sealed class TestLogger<T> : ILogger<T>
@@ -269,6 +287,120 @@ public class TodoPersistenceUnitTests
         Assert.Null(ex);
         Assert.Equal(0, await repository.CountAsync());
         Assert.Contains(logger.Logs, l => l.Level == LogLevel.Information && l.Message.Contains("was not found"));
+    }
+
+    // --- 0VP-T4-F11: corrupted file, null entries, missing-file log ---------------------
+
+    private const string CorruptedContent = "{ corrupted invalid json content [[[";
+
+    private static InMemoryTodoRepository CreateRepository(
+        FakeFileStorage storage,
+        string filePath,
+        TestLogger<InMemoryTodoRepository> logger,
+        bool seed = false,
+        TimeProvider? time = null) =>
+        new(
+            new InMemoryTodoOptions { SeedSampleData = seed },
+            time ?? TimeProvider.System,
+            storage,
+            new JsonPersistenceOptions { Enabled = true, FilePath = filePath },
+            logger);
+
+    [Fact]
+    public async Task LoadAsync_WithCorruptedJson_BacksUpTheFile_AndShutdownSaveDoesNotLoseIt()
+    {
+        const string path = "data/todos.json";
+        var storage = new FakeFileStorage();
+        storage.Files[path] = CorruptedContent;
+        var logger = new TestLogger<InMemoryTodoRepository>();
+        var time = new FixedTimeProvider(new DateTimeOffset(2026, 11, 22, 18, 30, 15, 123, TimeSpan.Zero));
+        var repository = CreateRepository(storage, path, logger, time: time);
+
+        await repository.LoadAsync();
+        await repository.SaveAsync(); // what the hosted service does on shutdown
+
+        const string backup = "data/todos.json.corrupt-20261122183015123";
+        Assert.True(storage.Files.ContainsKey(backup), "The corrupted file was not backed up.");
+        Assert.Equal(CorruptedContent, storage.Files[backup]);
+        Assert.Contains(logger.Logs, log =>
+            log.Level == LogLevel.Error && log.Message.Contains("corrupted") && log.Message.Contains(backup));
+    }
+
+    [Fact]
+    public async Task LoadAsync_WithCorruptedJson_WhenBackupFails_SaveDoesNotOverwriteTheFile()
+    {
+        const string path = "data/todos.json";
+        var storage = new FakeFileStorage { CopyFailure = new UnauthorizedAccessException("read-only folder") };
+        storage.Files[path] = CorruptedContent;
+        var logger = new TestLogger<InMemoryTodoRepository>();
+        var repository = CreateRepository(storage, path, logger);
+
+        await repository.LoadAsync();
+        await repository.AddAsync(new TodoItem { Id = Guid.NewGuid(), Title = "Created after the failed load", CreatedAtUtc = DateTimeOffset.UtcNow });
+        await repository.SaveAsync();
+
+        // The only copy of the data stays untouched until somebody recovers it by hand.
+        Assert.Equal(CorruptedContent, storage.Files[path]);
+        Assert.Equal(0, storage.WriteCount);
+        Assert.Contains(logger.Logs, log => log.Level == LogLevel.Error && log.Message.Contains("not saved"));
+    }
+
+    [Fact]
+    public async Task LoadAsync_WithNullEntries_KeepsTheValidTasks()
+    {
+        const string path = "data/todos.json";
+        var validId = Guid.NewGuid();
+        var storage = new FakeFileStorage();
+        storage.Files[path] = @"[
+            null,
+            { ""Id"": """ + validId + @""", ""Title"": ""Valid task"", ""Priority"": ""High"", ""CreatedAtUtc"": ""2026-01-01T00:00:00Z"" },
+            null
+        ]";
+        var logger = new TestLogger<InMemoryTodoRepository>();
+        var repository = CreateRepository(storage, path, logger);
+
+        await repository.LoadAsync();
+
+        var task = Assert.Single(await repository.GetAllAsync());
+        Assert.Equal(validId, task.Id);
+        Assert.Contains(logger.Logs, log => log.Level == LogLevel.Warning && log.Message.Contains("2 empty (null) entries"));
+        Assert.DoesNotContain(logger.Logs, log => log.Level == LogLevel.Error);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WithOnlyANullEntry_StartsEmptyWithoutAnError()
+    {
+        const string path = "data/todos.json";
+        var storage = new FakeFileStorage();
+        storage.Files[path] = "[null]";
+        var logger = new TestLogger<InMemoryTodoRepository>();
+        var repository = CreateRepository(storage, path, logger, seed: true);
+
+        await repository.LoadAsync();
+
+        Assert.Equal(0, await repository.CountAsync());
+        Assert.DoesNotContain(logger.Logs, log => log.Level == LogLevel.Error);
+        Assert.DoesNotContain(storage.Files.Keys, key => key.Contains(".corrupt-"));
+    }
+
+    [Fact]
+    public async Task LoadAsync_WhenFileIsMissing_WithSeedData_LogsTheSeededCount()
+    {
+        var storage = new FakeFileStorage();
+        var logger = new TestLogger<InMemoryTodoRepository>();
+        var repository = CreateRepository(storage, "data/missing.json", logger, seed: true);
+
+        await repository.LoadAsync();
+
+        Assert.Equal(4, await repository.CountAsync());
+        var message = Assert.Single(logger.Logs, log => log.Message.Contains("was not found")).Message;
+        Assert.Contains("4 sample task(s)", message);
+        Assert.DoesNotContain("empty state", message);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     [Fact]
