@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using UAI.ZeroVP.API.Instances;
 
 namespace UAI.ZeroVP.API.Logging;
@@ -21,27 +22,28 @@ public static class ApplicationLoggingExtensions
         // ID instance je potřeba už při vzniku poskytovatele (název souboru).
         builder.Services.AddInstanceIdentity();
 
-        var fileOptions = new FileLoggingOptions();
-        builder.Configuration.GetSection(FileLoggingOptions.SectionName).Bind(fileOptions);
+        var contentRoot = builder.Environment.ContentRootPath;
 
-        if (fileOptions.Enabled)
+        // Registrace přes továrnu (ne hotovou instancí): kontejner pak poskytovatele
+        // při ukončení aplikace sám zavolá Dispose a ten vyprázdní frontu do souboru.
+        // Celé nastavení, včetně FileLogging:Enabled, se čte až tady z hotové konfigurace.
+        // Při čtení už během sestavování builderu by se neprojevilo přepsání přidané později
+        // (ConfigureAppConfiguration v testech nebo při hostování). ID instance určuje název souboru.
+        builder.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
         {
-            var contentRoot = builder.Environment.ContentRootPath;
+            var options = new FileLoggingOptions();
+            serviceProvider.GetRequiredService<IConfiguration>()
+                .GetSection(FileLoggingOptions.SectionName).Bind(options);
 
-            // Registrace přes továrnu (ne hotovou instancí): kontejner pak poskytovatele
-            // při ukončení aplikace sám zavolá Dispose a ten vyprázdní frontu do souboru.
-            // Nastavení se čte až tady z hotové konfigurace; ID instance určuje název souboru.
-            builder.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
+            if (!options.Enabled)
             {
-                var options = new FileLoggingOptions();
-                serviceProvider.GetRequiredService<IConfiguration>()
-                    .GetSection(FileLoggingOptions.SectionName).Bind(options);
+                return NullLoggerProvider.Instance;
+            }
 
-                var instance = serviceProvider.GetRequiredService<InstanceIdentity>();
+            var instance = serviceProvider.GetRequiredService<InstanceIdentity>();
 
-                return new JsonFileLoggerProvider(options, contentRoot, instanceId: instance.Id);
-            });
-        }
+            return new JsonFileLoggerProvider(options, contentRoot, instanceId: instance.Id);
+        });
 
         return builder;
     }

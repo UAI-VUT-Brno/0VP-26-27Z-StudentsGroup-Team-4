@@ -110,7 +110,9 @@ public sealed class RequestLoggingMiddleware
     {
         var durationMs = Math.Round(_timeProvider.GetElapsedTime(startTimestamp).TotalMilliseconds, 1);
         var method = context.Request.Method;
-        var path = context.Request.Path.Value ?? "/";
+        // ASP.NET Core dekóduje %0D%0A v cestě na skutečné CR LF; bez úpravy by cesta
+        // v textovém logu založila podvržený řádek (CWE-117).
+        var path = LogSanitizer.ForLog(context.Request.Path.Value) ?? "/";
         var route = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
 
         var message = string.Create(CultureInfo.InvariantCulture,

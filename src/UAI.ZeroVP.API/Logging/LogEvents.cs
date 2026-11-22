@@ -29,6 +29,9 @@ public static class LogEvents
     /// <summary>Start nebo běh aplikace skončil neošetřenou chybou.</summary>
     public static readonly EventId ApplicationFailed = new(1004, nameof(ApplicationFailed));
 
+    /// <summary>Fronta souborového logu byla plná a záznamy se zahodily (uvádí se jejich počet).</summary>
+    public static readonly EventId LogEntriesDropped = new(1005, nameof(LogEntriesDropped));
+
     // --- 2xxx: HTTP požadavky ----------------------------------------------
 
     /// <summary>Požadavek byl zpracován a odpověď odeslána (úspěšným i chybovým stavovým kódem).</summary>
