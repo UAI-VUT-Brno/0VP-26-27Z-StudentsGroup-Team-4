@@ -56,9 +56,12 @@ public sealed class TodosController : ControllerBase
         return Ok(items.Select(item => item.ToDto()).ToList());
     }
 
-    /// <summary>Regulární výraz vyžadující ISO 8601 datum a čas s explicitním offsetem ('Z' nebo '±HH:MM').</summary>
+    /// <summary>
+    /// Regulární výraz vyžadující ISO 8601 datum a čas s explicitním offsetem ('Z' nebo '±HH:MM').
+    /// Používá <c>\z</c> místo <c>$</c>, protože <c>$</c> by v .NET povolilo i koncový znak nového řádku.
+    /// </summary>
     private static readonly Regex AsOfUtcPattern = new(
-        @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$",
+        @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})\z",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>Vrátí nedokončené úkoly s termínem před zadaným časem.</summary>

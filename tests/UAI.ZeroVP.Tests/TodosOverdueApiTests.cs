@@ -91,6 +91,32 @@ public sealed class TodosOverdueApiTests : IClassFixture<WebApplicationFactory<P
         Assert.Contains("asOfUtc", problem.Errors.Keys);
     }
 
+    [Theory]
+    [InlineData("2026-11-18T10:00:00Z%0A")]
+    [InlineData("2026-11-18T10:00:00+02:00%0A")]
+    public async Task GetOverdue_AsOfUtcWithTrailingNewline_ReturnsValidationProblemDetails(string rawAsOfUtc)
+    {
+        // The value is sent pre-encoded: "$" in the validation regex would accept a trailing "\n", "\z" must not.
+        using var response = await _client.GetAsync($"{Url}?asOfUtc={rawAsOfUtc}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>(JsonOptions);
+        Assert.NotNull(problem);
+        Assert.Contains("asOfUtc", problem.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task GetOverdue_AsOfUtcWithUnescapedPlus_ReturnsValidationProblemDetails()
+    {
+        // An unescaped "+" is decoded as a space in a query string, so the offset is lost.
+        using var response = await _client.GetAsync($"{Url}?asOfUtc=2026-11-18T10:00:00+02:00");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>(JsonOptions);
+        Assert.NotNull(problem);
+        Assert.Contains("asOfUtc", problem.Errors.Keys);
+    }
+
     [Fact]
     public async Task GetOverdue_EmptyUserId_Returns200WithEmptyList()
     {
