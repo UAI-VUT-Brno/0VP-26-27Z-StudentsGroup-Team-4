@@ -23,7 +23,7 @@ namespace UAI.ZeroVP.Data.Persistence;
 /// Nevyžaduje <see cref="LoadAsync"/> ani <see cref="SaveAsync"/> pro správnou funkci; ukládání při ukončení
 /// aplikace není potřeba, protože se zapisuje po každé změně.
 /// </summary>
-public sealed class SharedJsonFileTodoRepository : ITodoRepository
+public sealed class SharedJsonFileTodoRepository : ITodoRepository, IDisposable
 {
     private const int MoveAttempts = 5;
 
@@ -224,6 +224,9 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
     /// <summary>Nic nedělá: sdílený režim zapisuje každou změnu okamžitě.</summary>
     public Task SaveAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
+    /// <summary>Uvolní <see cref="SemaphoreSlim"/> používaný k serializaci operací v rámci procesu.</summary>
+    public void Dispose() => _gate.Dispose();
+
     private async Task<T> ExecuteAsync<T>(
         Func<Dictionary<Guid, TodoItem>, (T Result, bool Changed)> operation,
         CancellationToken cancellationToken)
@@ -236,12 +239,12 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
         {
             using var fileLock = await AcquireFileLockAsync(cancellationToken).ConfigureAwait(false);
 
-            var items = ReadItems();
+            var items = await ReadItemsAsync(cancellationToken).ConfigureAwait(false);
             var (result, changed) = operation(items);
 
             if (changed)
             {
-                WriteItems(items.Values);
+                await WriteItemsAsync(items.Values, cancellationToken).ConfigureAwait(false);
             }
 
             return result;
@@ -285,7 +288,7 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
         }
     }
 
-    private Dictionary<Guid, TodoItem> ReadItems()
+    private async Task<Dictionary<Guid, TodoItem>> ReadItemsAsync(CancellationToken cancellationToken)
     {
         var items = new Dictionary<Guid, TodoItem>();
 
@@ -294,7 +297,7 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
             return items;
         }
 
-        var json = File.ReadAllText(_filePath, Encoding.UTF8);
+        var json = await File.ReadAllTextAsync(_filePath, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -354,7 +357,7 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
             backup);
     }
 
-    private void WriteItems(IEnumerable<TodoItem> items)
+    private async Task WriteItemsAsync(IEnumerable<TodoItem> items, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(
             items.OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id).ToList(),
@@ -364,7 +367,11 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
 
         try
         {
-            File.WriteAllText(temporaryPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            await File.WriteAllTextAsync(
+                temporaryPath,
+                json,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                cancellationToken).ConfigureAwait(false);
 
             for (var attempt = 1; ; attempt++)
             {
@@ -378,7 +385,7 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
                 catch (Exception exception) when (attempt < MoveAttempts && (exception is IOException or UnauthorizedAccessException))
                 {
                     // Antivir nebo indexer mohou soubor na chvíli držet (hlavně ve Windows).
-                    Thread.Sleep(20 * attempt);
+                    await Task.Delay(20 * attempt, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
