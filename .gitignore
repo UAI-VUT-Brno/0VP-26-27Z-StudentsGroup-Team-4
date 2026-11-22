@@ -13,6 +13,9 @@ TestResults/
 *.suo
 .vscode/
 
+## MCP client config (local dev convenience, not project-managed)
+.mcp.json
+
 ## Uživatelské nastavení aplikace
 appsettings.*.local.json
 

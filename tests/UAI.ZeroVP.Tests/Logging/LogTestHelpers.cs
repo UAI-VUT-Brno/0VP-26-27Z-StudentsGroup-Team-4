@@ -178,20 +178,18 @@ internal static class LogFiles
 /// <summary>Rozšiřující metody pro testování logování.</summary>
 public static class LogTestHelpers
 {
-    public static IWebHostBuilder RedirectLogsToTemp(this IWebHostBuilder builder)
+    /// <summary>
+    /// Přesměruje souborový log testovacího serveru do <paramref name="directory"/>, typicky do
+    /// <see cref="TempDir.FullPath"/> dané testovací třídy. Každá třída tak má vlastní složku
+    /// (souběžné testy si nepřepisují soubory) a po testu ji smaže. Třída musí nejdřív uvolnit
+    /// <c>WebApplicationFactory</c> (tím se fronta logu vyprázdní a soubor zavře), teprve pak <c>TempDir</c>.
+    /// </summary>
+    public static IWebHostBuilder RedirectLogsTo(this IWebHostBuilder builder, string directory)
     {
-        return builder.ConfigureAppConfiguration((context, config) =>
-        {
-            var tempPath = Path.Combine(Path.GetTempPath(), "ZeroVP_TestLogs");
-
-            // Pro jistotu rovnou složku vytvoříme
-            Directory.CreateDirectory(tempPath);
-
+        return builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                // TADY BYLA CHYBA: Musí to být Directory, ne Path!
-                { "FileLogging:Directory", tempPath }
-            });
-        });
+                ["FileLogging:Directory"] = directory
+            }));
     }
 }

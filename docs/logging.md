@@ -27,9 +27,13 @@ Kde je kód: `src/UAI.ZeroVP.API/Logging/`. Do `Program.cs` se zapojuje třemi �
 | `dotnet run --project src/UAI.ZeroVP.API` | `src/UAI.ZeroVP.API/logs/` |
 | Docker kontejner | `/app/logs/` (uvnitř kontejneru) |
 
-> **Docker a persistence.** Soubor v kontejneru zmizí spolu s kontejnerem – stejně jako data
-> v paměti (viz README, sekce Úložiště dat). Aby log restart přežil, připojte svazek a nasměrujte
-> do něj log:
+> **Docker a persistence.** Soubor s logem je svázán s životním cyklem kontejneru – zmizí spolu
+> s ním, pokud kontejner smažete (`docker rm`, `docker compose down` bez připojeného svazku, …).
+> To už ale neplatí pro samotná data úkolů: od zavedení JSON perzistence (`JsonPersistence`, viz
+> README, sekce Úložiště dat) se úkoly ukládají do souboru a při startu se znovu načtou, takže na
+> rozdíl od logu přežijí restart kontejneru i celé aplikace – pokud je i soubor s daty na trvalém
+> svazku (`docker compose down -v` svazek a s ním i data smaže). Aby log restart přežil stejně jako
+> data, připojte svazek a nasměrujte do něj log:
 >
 > ```bash
 > docker run -v zerovp-logs:/var/log/zerovp -e FileLogging__Directory=/var/log/zerovp ...
@@ -108,6 +112,7 @@ jinak `Success`.
 | 1002 | `ApplicationStopping` | Information | Přišel pokyn k ukončení (Ctrl+C, SIGTERM, `docker stop`). | – |
 | 1003 | `ApplicationStopped` | Information | Aplikace se korektně zastavila. | – |
 | 1004 | `ApplicationFailed` | Critical | Start nebo běh skončil neošetřenou chybou (např. obsazený port). Proces skončí s kódem 1. | – (výjimka v `exception`) |
+| 1005 | `LogEntriesDropped` | Warning | Fronta souborového logu byla plná (disk nestíhá) a záznamy se zahodily. Zapíše se po nejbližší zapsané dávce a zároveň na `stderr`. | `DroppedCount` |
 | 2000 | `RequestCompleted` | Information / Warning / Error | Požadavek dokončen: stavový kód < 400 = Information, 4xx = Warning, 5xx = Error. | `Method`, `Path`, `Route`, `StatusCode`, `DurationMs`, `TraceId` |
 | 2001 | `RequestFailed` | Error | Požadavek skončil neošetřenou výjimkou (klient dostane 500). | stejné jako 2000 |
 | 2002 | `RequestAborted` | Warning | Klient se odpojil dřív, než byl požadavek zpracován (`result` = `Cancelled`). | stejné jako 2000 |
@@ -126,6 +131,11 @@ Pozor: u událostí 3000 se zapisuje `Title` úkolu, tedy text zadaný uživatel
 
 Hodnoty z požadavků (cesta, název úkolu) jsou v JSON escapované, takže nelze do logu
 „podvrhnout“ další řádek pomocí znaku nového řádku.
+
+Konzolový (textový) log zprávu escapovanou nemá. Proto se přes `LogSanitizer.ForLog`
+upravuje název úkolu ve zprávě událostí 3000 a 3002 a cesta požadavku u událostí 2000–2002
+(ASP.NET Core v cestě dekóduje `%0D%0A` na skutečné CR LF). Řídicí znaky se zapíší jako
+`\r`, `\n`, `\t`, ostatní jako `\uXXXX`. Uložený úkol i odpověď API mají název beze změny.
 
 ## Příklady
 
@@ -203,9 +213,12 @@ dotnet test tests/UAI.ZeroVP.Tests
 | Testovací třída | Co dokazuje |
 |---|---|
 | `JsonFileLoggerProviderTests` | povinná pole záznamu, UTC čas, čitelná diakritika, odvození `result`, výjimka v `error`/`exception`, nemožnost podvrhnout řádek logu, zachování pořadí, souběžný zápis z více vláken, nový soubor po půlnoci, retence, odolnost vůči nezapisovatelné složce |
-| `RequestLoggingMiddlewareTests` | úspěch / 4xx / 5xx, výjimka (zalogována a znovu vyhozena), odpojení klienta, `Route`, vynechané cesty, query string se nelogují |
+| `RequestLoggingMiddlewareTests` | úspěch / 4xx / 5xx, výjimka (zalogována a znovu vyhozena), odpojení klienta, `Route`, vynechané cesty, query string se nelogují, cesta s `\r\n` nezaloží nový řádek |
 | `LogFileNamingTests`, `JsonFileLoggerProviderInstanceTests` | název souboru s ID instance a bez něj, ošetření nevhodných znaků, dvě instance = dva soubory, retence nesmaže soubory jiné instance |
 | `ApplicationLifecycleLoggingTests` | skutečný server: `ApplicationStarting` → `Started` → požadavky → `Stopping` → `Stopped` se zapíšou do souboru; selhání startu = `ApplicationFailed` |
+| `LogSanitizerTests`, `TitleLogInjectionTests` | escapování řídicích znaků; `Title` s `\r\n` u `POST /api/todos` a `POST /api/todos/repeat` nezaloží v textové zprávě nový řádek, uložený název zůstane beze změny |
+| `JsonFileLoggerProviderBackpressureTests` | při plné frontě se zahozené záznamy spočítají a zapíšou jako `LogEntriesDropped`; každý záznam je buď v souboru, nebo v počtu |
+| `FileLoggingEnabledOverrideTests` | `FileLogging:Enabled` přepsané přes `ConfigureAppConfiguration` platí (`false` = žádný soubor, `true` = soubor) |
 
 ## Omezení
 
@@ -216,3 +229,5 @@ dotnet test tests/UAI.ZeroVP.Tests
   by měla mít vlastní složku, vlastní název souboru (`FileLogging__IncludeInstanceId=true`
   + `Instance__Id`), nebo se má logovat na `stdout` a sbírat Dockerem.
 - Při přeplnění fronty (výchozí 10 000 záznamů, tj. disk stojí) se nejnovější záznamy zahazují.
+  Zahození ale není tiché: počet se zapíše jako událost `LogEntriesDropped` (1005) a na `stderr`.
+  Pokud zbytek fronty nestihne odejít na disk do 5 s po ukončení aplikace, ohlásí se to na `stderr`.

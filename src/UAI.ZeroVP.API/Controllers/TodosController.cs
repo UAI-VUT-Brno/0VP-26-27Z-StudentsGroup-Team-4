@@ -143,7 +143,7 @@ public sealed class TodosController : ControllerBase
         var entity = request.ToEntity(_timeProvider.GetUtcNow());
         var created = await _repository.AddAsync(entity, cancellationToken);
 
-        _logger.LogInformation(LogEvents.TodoCreated, "Vytvořen úkol {TodoId} ({Title}).", created.Id, created.Title);
+        _logger.LogInformation(LogEvents.TodoCreated, "Vytvořen úkol {TodoId} ({Title}).", created.Id, LogSanitizer.ForLog(created.Title));
 
         return CreatedAtRoute(nameof(GetById), new { id = created.Id }, created.ToDto());
     }
@@ -180,7 +180,7 @@ public sealed class TodosController : ControllerBase
             LogEvents.WeeklyTodosCreated,
             "Created {Count} weekly occurrences of task '{Title}' (first due {FirstDueAtUtc}, last due {LastDueAtUtc}).",
             created.Count,
-            created[0].Title,
+            LogSanitizer.ForLog(created[0].Title),
             FormatUtc(created[0].DueAtUtc),
             FormatUtc(created[^1].DueAtUtc));
 

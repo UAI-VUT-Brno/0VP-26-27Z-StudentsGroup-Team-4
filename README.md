@@ -487,3 +487,11 @@ Zámek souboru funguje spolehlivě na lokálním svazku jednoho hostitele (viz
 [sdílené úložiště](#sdílené-úložiště-více-instancí-jedna-databáze)). Bind mount sdílené složky z Windows/macOS
 ani síťový disk (NFS/SMB) na to nepoužívejte; proto je `todo-data` pojmenovaný svazek. Repliky běží na jednom
 stroji; pro nasazení na více strojích je potřeba skutečná databáze.
+
+`docker compose restart api` restartuje **všechny repliky služby `api` najednou** (jsou to kontejnery
+jedné škálované služby, docker compose je rozlišuje jen číslem, ne vlastním jménem) – rolling restart
+po jedné replice tímto příkazem nejde. Po dobu, kdy jsou dole všechny, nginx nemá kam proxovat požadavky
+a dočasně vrací `502 Bad Gateway`, než aspoň jedna replika znovu naběhne a projde health checkem. Pro
+restart bez výpadku restartujte kontejnery jednotlivě přes `docker restart <jméno/ID kontejneru>`
+(zjistíte přes `docker compose ps api`), nebo pro produkční nasazení použijte orchestrátor s podporou
+rolling update (Kubernetes, Docker Swarm apod.).

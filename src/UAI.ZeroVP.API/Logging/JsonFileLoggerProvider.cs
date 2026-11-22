@@ -17,10 +17,19 @@ namespace UAI.ZeroVP.API.Logging;
 /// Chyba při zápisu (plný disk, chybějící práva) aplikaci nikdy neshodí –
 /// vypíše se na standardní chybový výstup a zápis se zkusí znovu u další dávky.
 /// </para>
+/// <para>
+/// Když je fronta plná (disk nestíhá), nové záznamy se zahodí, aby požadavky nečekaly.
+/// Zahozené záznamy se ale počítají (<see cref="DroppedCount"/>). Po nejbližší zapsané dávce
+/// se do souboru i na standardní chybový výstup zapíše varování <c>LogEntriesDropped</c>
+/// s jejich počtem, takže mezera v logu není tichá.
+/// </para>
 /// </summary>
 [ProviderAlias("JsonFile")]
 public sealed class JsonFileLoggerProvider : ILoggerProvider
 {
+    private const string Category = "UAI.ZeroVP.API.Logging.JsonFileLoggerProvider";
+    private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(5);
+
     private readonly FileLoggingOptions _options;
     private readonly string _directory;
     private readonly string _filePrefix;
@@ -28,6 +37,8 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
     private readonly Channel<string> _queue;
     private readonly Task _writerTask;
     private int _disposed;
+    private long _droppedCount;
+    private long _unreportedDropCount;
 
     /// <summary>Vytvoří poskytovatele a spustí zapisovací vlákno.</summary>
     /// <param name="options">Nastavení souborového logu.</param>
@@ -47,11 +58,15 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
         _filePrefix = LogFileNaming.BuildPrefix(options.FileNamePrefix, instanceId, options.IncludeInstanceId);
         _timeProvider = timeProvider ?? TimeProvider.System;
 
-        _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(Math.Max(1, options.QueueCapacity))
-        {
-            SingleReader = true,
-            FullMode = BoundedChannelFullMode.DropWrite
-        });
+        // DropWrite: při plné frontě se nový záznam zahodí a TryWrite přesto vrátí true.
+        // Zahození je proto vidět jen přes zpětné volání itemDropped, kde se počítá.
+        _queue = Channel.CreateBounded<string>(
+            new BoundedChannelOptions(Math.Max(1, options.QueueCapacity))
+            {
+                SingleReader = true,
+                FullMode = BoundedChannelFullMode.DropWrite
+            },
+            itemDropped: _ => OnItemDropped());
 
         _writerTask = Task.Run(WriteLoopAsync);
     }
@@ -70,19 +85,44 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
         // Uzavřít frontu a počkat, až zapisovač zapíše zbytek a soubor zavře.
         _queue.Writer.TryComplete();
 
+        var finished = true;
+
         try
         {
-            _writerTask.Wait(TimeSpan.FromSeconds(5));
+            finished = _writerTask.Wait(ShutdownTimeout);
         }
         catch (AggregateException)
         {
             // Chyba zapisovače už byla ohlášena na stderr.
         }
+
+        if (!finished)
+        {
+            Console.Error.WriteLine(
+                $"[JsonFileLogger] Zápis zbytku fronty nedoběhl do {ShutdownTimeout.TotalSeconds:0} s; záznamy, které v ní zůstaly, se mohly ztratit.");
+        }
+
+        // Zahozené záznamy, které už zapisovač nestihl ohlásit do souboru.
+        var unreported = Interlocked.Exchange(ref _unreportedDropCount, 0);
+        if (unreported > 0)
+        {
+            Console.Error.WriteLine(DropMessage(unreported));
+        }
     }
+
+    /// <summary>Kolik záznamů se celkem zahodilo kvůli plné frontě.</summary>
+    public long DroppedCount => Interlocked.Read(ref _droppedCount);
 
     internal TimeProvider Clock => _timeProvider;
 
+    // False vrací jen uzavřená fronta po Dispose (konec aplikace), ne plná fronta.
     internal void Enqueue(string line) => _queue.Writer.TryWrite(line);
+
+    private void OnItemDropped()
+    {
+        Interlocked.Increment(ref _droppedCount);
+        Interlocked.Increment(ref _unreportedDropCount);
+    }
 
     private async Task WriteLoopAsync()
     {
@@ -112,6 +152,8 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
                         writer!.WriteLine(line);
                     }
 
+                    ReportDrops(writer);
+
                     // Jednou za dávku – záznamy jsou na disku hned, ne až při zavření souboru.
                     writer?.Flush();
                 }
@@ -126,9 +168,53 @@ public sealed class JsonFileLoggerProvider : ILoggerProvider
         }
         finally
         {
+            try
+            {
+                ReportDrops(writer);
+                writer?.Flush();
+            }
+            catch (Exception exception)
+            {
+                ReportFailure(exception);
+            }
+
             writer?.Dispose();
         }
     }
+
+    // Zapíše do souboru (a na stderr) varování o záznamech zahozených od posledního hlášení.
+    // Bez otevřeného souboru počet zůstane čekat na další dávku, nebo ho ohlásí Dispose na stderr.
+    private void ReportDrops(StreamWriter? writer)
+    {
+        if (writer is null || Interlocked.Read(ref _unreportedDropCount) == 0)
+        {
+            return;
+        }
+
+        var dropped = Interlocked.Exchange(ref _unreportedDropCount, 0);
+        if (dropped == 0)
+        {
+            return;
+        }
+
+        var message = DropMessage(dropped);
+        var state = new StructuredLogState(message).With("DroppedCount", dropped);
+
+        writer.WriteLine(JsonLogEntryFormatter.Format(
+            _timeProvider.GetUtcNow(),
+            Category,
+            LogLevel.Warning,
+            LogEvents.LogEntriesDropped,
+            state,
+            exception: null,
+            message));
+
+        Console.Error.WriteLine(message);
+    }
+
+    private static string DropMessage(long dropped) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"[JsonFileLogger] Fronta souborového logu byla plná, zahozeno {dropped} záznamů.");
 
     private string GetFilePath()
     {
