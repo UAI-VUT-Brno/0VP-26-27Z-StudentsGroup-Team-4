@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using UAI.ZeroVP.API.Logging;
 using UAI.ZeroVP.API.Mapping;
@@ -55,27 +56,71 @@ public sealed class TodosController : ControllerBase
         return Ok(items.Select(item => item.ToDto()).ToList());
     }
 
+    /// <summary>
+    /// Regulární výraz vyžadující ISO 8601 datum a čas s explicitním offsetem ('Z' nebo '±HH:MM').
+    /// Používá <c>\z</c> místo <c>$</c>, protože <c>$</c> by v .NET povolilo i koncový znak nového řádku.
+    /// </summary>
+    private static readonly Regex AsOfUtcPattern = new(
+        @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})\z",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     /// <summary>Vrátí nedokončené úkoly s termínem před zadaným časem.</summary>
-    /// <param name="asOfUtc">Referenční čas s offsetem; při vynechání se použije aktuální UTC čas.</param>
+    /// <param name="asOfUtc">Referenční čas jako ISO 8601 datum a čas s povinným offsetem (např. '2026-11-18T10:00:00Z'); při vynechání se použije aktuální UTC čas.</param>
     /// <param name="userId">Identifikátor uživatele; vynechání znamená bez filtru.</param>
     /// <param name="cancellationToken">Token pro zrušení operace.</param>
     /// <response code="200">Nedokončené úkoly po termínu, seřazené podle termínu a priority.</response>
-    /// <response code="400">Hodnota parametru <c>asOfUtc</c> není platné datum a čas.</response>
+    /// <response code="400">Hodnota parametru <c>asOfUtc</c> chybí offset nebo není platné datum a čas.</response>
     [HttpGet("overdue")]
     [ProducesResponseType(typeof(IReadOnlyList<TodoItemDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IReadOnlyList<TodoItemDto>>> GetOverdue(
-        [FromQuery] DateTimeOffset? asOfUtc,
+        [FromQuery] string? asOfUtc,
         [FromQuery] string? userId,
         CancellationToken cancellationToken)
     {
         var userIdFilter = userId is null && Request?.Query.ContainsKey("userId") == true
             ? string.Empty
             : userId;
-        var referenceTime = asOfUtc ?? _timeProvider.GetUtcNow();
+
+        var asOfUtcProvided = Request?.Query.ContainsKey("asOfUtc") == true;
+
+        DateTimeOffset referenceTime;
+        if (!asOfUtcProvided)
+        {
+            referenceTime = _timeProvider.GetUtcNow();
+        }
+        else if (string.IsNullOrEmpty(asOfUtc) || !TryParseAsOfUtc(asOfUtc, out referenceTime))
+        {
+            ModelState.AddModelError(
+                nameof(asOfUtc),
+                "Hodnota 'asOfUtc' musí být platné ISO 8601 datum a čas s explicitním offsetem ('Z' nebo '±HH:MM'), např. '2026-11-18T10:00:00Z'.");
+
+            return ValidationProblem(ModelState);
+        }
+
         var items = await _repository.GetOverdueAsync(referenceTime, userIdFilter, cancellationToken);
 
         return Ok(items.Select(item => item.ToDto()).ToList());
+    }
+
+    /// <summary>
+    /// Ověří, že <paramref name="value"/> je ISO 8601 datum a čas s explicitním offsetem,
+    /// a nespoléhá se na výchozí chování <see cref="DateTimeOffset"/>, které by u hodnoty
+    /// bez offsetu tiše dosadilo časovou zónu serveru.
+    /// </summary>
+    private static bool TryParseAsOfUtc(string value, out DateTimeOffset result)
+    {
+        if (!AsOfUtcPattern.IsMatch(value))
+        {
+            result = default;
+            return false;
+        }
+
+        return DateTimeOffset.TryParse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AllowWhiteSpaces,
+            out result);
     }
 
     /// <summary>Vrátí jeden úkol podle identifikátoru.</summary>
