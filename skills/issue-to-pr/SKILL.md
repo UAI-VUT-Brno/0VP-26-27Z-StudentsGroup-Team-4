@@ -257,15 +257,17 @@ missing or out of date. Symlinks are deliberately not used, because they are
 unreliable on Windows unless Developer Mode / `core.symlinks` is guaranteed
 for the whole team.
 
-Still open and tracked in a follow-up issue (must be done before the
-end-to-end verification in Issue 6):
+The generated `.claude/skills/issue-to-pr/` copy is committed, so the command
+works for everyone after `git pull`. The same sync scripts also register the
+subagents: every `skills/issue-to-pr/agents/*.md` is copied to
+`.claude/agents/`, where Claude Code discovers subagents. CI runs
+`bash scripts/sync-claude-skills.sh --check` (job `skills-sync-check`) and
+fails when `skills/` and `.claude/` drift apart. After any change under
+`skills/issue-to-pr/`, run the sync script and commit the result together
+with the source change.
 
-- commit the generated `.claude/skills/issue-to-pr/` copy so that the
-  command works for everyone after `git pull`, and run the check mode in CI;
-- decide how the subagents in `agents/` are registered: Claude Code looks
-  for subagents in `.claude/agents/`, so either the orchestrator reads
-  `agents/*.md` and passes the content on as a prompt, or the sync scripts
-  also copy them into `.claude/agents/`;
+End-to-end verification of the four-stage routing is recorded in
+`docs/issue-to-pr-e2e-verification.md`.
 
 ## 9. Out of scope for this issue
 
@@ -274,7 +276,3 @@ end-to-end verification in Issue 6):
   `agents/release-pr.md` (Issues 2–5).
 - The content of the files under `prompts/` and `rules/`; they are owned by
   Issues 2–5 (`rules/` and `prompts/failure-parsing.md` exist today).
-- The open registration items listed in §8 (committing the generated copy,
-  CI check, subagent registration).
-- End-to-end verification of the full routing/wiring between subagents —
-  tracked as a follow-up check once Issues 2–5 land, before Issue 6.
