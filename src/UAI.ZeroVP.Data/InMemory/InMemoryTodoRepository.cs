@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,10 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     private readonly IFileStorage _fileStorage;
     private readonly JsonPersistenceOptions _persistenceOptions;
     private readonly ILogger<InMemoryTodoRepository> _logger;
+
+    // Nastaví se, když je soubor poškozený a nepodařilo se ho zazálohovat: pak je původní soubor
+    // jedinou kopií dat a SaveAsync ho nesmí přepsat (data by šla obnovit jen ručně z něj).
+    private volatile bool _saveSuspended;
 
     private static JsonSerializerOptions JsonOptions => TodoJson.Options;
 
@@ -178,7 +183,19 @@ public sealed class InMemoryTodoRepository : ITodoRepository
 
         if (!_fileStorage.FileExists(path))
         {
-            _logger.LogInformation("Persistent task storage file '{FilePath}' was not found. Initializing with empty state.", path);
+            // Ukázková data (SeedSampleData) už jsou v paměti z konstruktoru – hláška musí říct, kolik jich je.
+            if (_items.IsEmpty)
+            {
+                _logger.LogInformation("Persistent task storage file '{FilePath}' was not found. Initializing with empty state.", path);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Persistent task storage file '{FilePath}' was not found. Starting with {Count} sample task(s); the file is created on shutdown.",
+                    path,
+                    _items.Count);
+            }
+
             return;
         }
 
@@ -192,22 +209,55 @@ public sealed class InMemoryTodoRepository : ITodoRepository
                 return;
             }
 
-            var loadedTasks = JsonSerializer.Deserialize<List<TodoItem>>(json, JsonOptions);
+            var loadedTasks = JsonSerializer.Deserialize<List<TodoItem?>>(json, JsonOptions);
             _items.Clear();
 
-            if (loadedTasks != null)
+            var skipped = 0;
+
+            foreach (var task in loadedTasks ?? [])
             {
-                foreach (var task in loadedTasks)
+                // Prázdná položka (null) v poli se přeskočí, ostatní úkoly ze souboru zůstanou.
+                if (task is null)
                 {
-                    _items[task.Id] = task;
+                    skipped++;
+                    continue;
                 }
+
+                _items[task.Id] = task;
+            }
+
+            if (skipped > 0)
+            {
+                _logger.LogWarning(
+                    "Persistent storage file '{FilePath}' contains {SkippedCount} empty (null) entries; they were skipped.",
+                    path,
+                    skipped);
             }
 
             _logger.LogInformation("Successfully initialized {Count} task(s) from persistent storage '{FilePath}'.", _items.Count, path);
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Persistent storage file '{FilePath}' contains corrupted JSON. Starting with an empty state.", path);
+            // Bez zálohy by uložení při ukončení přepsalo jediný (možná opravitelný) soubor s daty.
+            var backup = BackupCorruptedFile(path);
+
+            if (backup is not null)
+            {
+                _logger.LogError(
+                    ex,
+                    "Persistent storage file '{FilePath}' contains corrupted JSON. A copy was saved to '{BackupPath}'. Starting with an empty state.",
+                    path,
+                    backup);
+            }
+            else
+            {
+                _saveSuspended = true;
+                _logger.LogError(
+                    ex,
+                    "Persistent storage file '{FilePath}' contains corrupted JSON and could not be backed up. Starting with an empty state; changes will not be saved, so the file stays untouched for manual recovery.",
+                    path);
+            }
+
             _items.Clear();
         }
         catch (Exception ex)
@@ -227,6 +277,14 @@ public sealed class InMemoryTodoRepository : ITodoRepository
 
         var path = _persistenceOptions.FilePath;
 
+        if (_saveSuspended)
+        {
+            _logger.LogError(
+                "Tasks were not saved: persistent storage file '{FilePath}' was corrupted at startup and could not be backed up, so it is kept unchanged for manual recovery.",
+                path);
+            return;
+        }
+
         try
         {
             var taskList = _items.Values
@@ -242,6 +300,26 @@ public sealed class InMemoryTodoRepository : ITodoRepository
         {
             _logger.LogError(ex, "Failed to save tasks to persistent storage file '{FilePath}'.", path);
             throw;
+        }
+    }
+
+    // Zkopíruje poškozený soubor vedle originálu (stejný tvar názvu jako sdílený režim:
+    // <soubor>.corrupt-<UTC čas>). Vrátí cestu ke kopii, nebo null, když se kopie nepovedla.
+    private string? BackupCorruptedFile(string path)
+    {
+        var backup = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{path}.corrupt-{_timeProvider.GetUtcNow():yyyyMMddHHmmssfff}");
+
+        try
+        {
+            _fileStorage.Copy(path, backup);
+            return backup;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Could not back up the corrupted persistent storage file '{FilePath}' to '{BackupPath}'.", path, backup);
+            return null;
         }
     }
 
