@@ -7,13 +7,13 @@
 /// every task of every user. It is therefore mapped only when <c>Mcp:Enabled</c> is <c>true</c>:
 /// <c>appsettings.Development.json</c> turns it on, <c>appsettings.json</c> keeps it off, so a plain
 /// Production run does not serve it unless somebody opts in explicitly.
+/// </para>
 /// <para>
 /// <b>Docker / <c>docker-compose.yml</c> is a special case.</b> The <c>api</c> service runs with
 /// <c>ASPNETCORE_ENVIRONMENT=Development</c> (for Swagger and sample-data seeding), which makes
 /// <c>appsettings.Development.json</c> - not <c>appsettings.json</c> - apply there too. That would
 /// turn this endpoint on for every replica behind the gateway unless <c>docker-compose.yml</c> also
 /// sets <c>Mcp__Enabled=false</c> explicitly for the <c>api</c> service; see <c>docs/mcp.md</c>.
-/// </para>
 /// </para>
 /// </summary>
 public static class TodoMcpServerExtensions

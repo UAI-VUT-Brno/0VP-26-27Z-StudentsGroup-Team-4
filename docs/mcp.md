@@ -130,12 +130,14 @@ The client should call `list_todos` / `get_todo`.
 each of them (all filters, a missing task, an invalid ID). `McpDisabledByDefaultTests` checks that `/mcp`
 does not exist when `Mcp:Enabled` is not set.
 
-`DockerComposeStaticConfigurationTests` reads `docker-compose.yml` itself and fails if the `api`
-service's explicit `Mcp__Enabled=false` override (see above) is ever removed or typo'd, without needing
-Docker. `DockerComposeMcpBehaviorTests` starts the real API with the same effective environment variables
-the `api` service runs with (`ASPNETCORE_ENVIRONMENT=Development` plus its overrides, including
-`Mcp__Enabled=false`) and checks that `/mcp` still answers `404` while the REST API keeps working - this
-is the regression test for 0VP-T4-F10.
+`DockerComposeStaticConfigurationTests` reads `docker-compose.yml` itself and fails if the effective
+`Mcp__Enabled` value of the `api` service (see above; a later duplicate entry wins, quotes are ignored)
+is not `false`, without needing Docker. `DockerComposeMcpBehaviorTests` starts the real API with the
+environment variables read from that same `api` service (except container paths such as
+`JsonPersistence__*` and `FileLogging__*`) and checks that `/mcp` answers `404` while the REST API keeps
+working. A negative control runs the same environment without `Mcp__Enabled` and expects `/mcp` *not*
+to answer `404`, which proves the test can fail. Together they are the regression test for 0VP-T4-F10.
+The parser does not follow `env_file:`, `docker-compose.override.yml` or `${...}` substitution.
 
 ```powershell
 dotnet test --filter "Category=Mcp"
