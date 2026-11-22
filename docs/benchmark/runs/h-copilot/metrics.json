@@ -1,0 +1,208 @@
+{
+    "runId":  "h-copilot",
+    "collectedAt":  "2026-11-22T16:13:59.8083638+01:00",
+    "base":  "benchmark/baseline-h",
+    "mergeBase":  "eab5cac68639a4c3fe48520c7e8a1bbf91ae5b51",
+    "head":  "b73981a9e353af3d90864b05501f7211db705584",
+    "timing":  {
+                   "startedAt":  "2026-11-22T15:30:00.0000000+01:00",
+                   "endedAt":  "2026-11-22T14:55:47.0000000+00:00",
+                   "endedKind":  "pullRequestCreatedAt",
+                   "totalSeconds":  1547,
+                   "pullRequestUrl":  "https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/pull/92"
+               },
+    "commits":  {
+                    "count":  3,
+                    "fixCommitCount":  0,
+                    "note":  "fix: commit count is only a proxy for repair cycles; use the run record for M4.",
+                    "list":  [
+                                 {
+                                     "sha":  "2f3aa79",
+                                     "committedAt":  "2026-11-22T15:50:19+01:00",
+                                     "subject":  "feat: add user identification to tasks (#15)"
+                                 },
+                                 {
+                                     "sha":  "bb50b5c",
+                                     "committedAt":  "2026-11-22T15:50:20+01:00",
+                                     "subject":  "test: update tests for task user identification (#15)"
+                                 },
+                                 {
+                                     "sha":  "b73981a",
+                                     "committedAt":  "2026-11-22T15:50:21+01:00",
+                                     "subject":  "docs: document task user identification (#15)"
+                                 }
+                             ]
+                },
+    "editorConfig":  {
+                         "filesChecked":  20,
+                         "filesClean":  6,
+                         "adherencePercent":  30,
+                         "violations":  {
+                                            "ENDOFLINE":  177,
+                                            "WHITESPACE":  0,
+                                            "FINALNEWLINE":  13,
+                                            "CHARSET":  13
+                                        },
+                         "files":  [
+                                       {
+                                           "file":  "README.md",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  177,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.API/Mapping/TodoMapper.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.API/UAI.ZeroVP.API.http",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.DTO/CreateTodoItemRequest.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.DTO/TodoItemDto.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.Data/Entities/TodoItem.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "src/UAI.ZeroVP.Data/InMemory/InMemoryTodoRepository.cs",
+                                           "FINALNEWLINE":  0,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  0,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/FullApiPerformanceTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/InMemoryTodoRepositoryQueryTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/InMemoryTodoRepositoryTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/InMemoryTodoRepositoryWriteTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/InfoControllerTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/RequestValidationBoundaryTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/RequestValidationTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodoItemTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodoMapperApplyToTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodoMapperCompletionTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodoMapperTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodosControllerTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       },
+                                       {
+                                           "file":  "tests/UAI.ZeroVP.Tests/TodosControllerUpdateTests.cs",
+                                           "FINALNEWLINE":  1,
+                                           "ENDOFLINE":  0,
+                                           "CHARSET":  1,
+                                           "WHITESPACE":  0
+                                       }
+                                   ],
+                         "dotnetFormat":  {
+                                              "ran":  true,
+                                              "exitCode":  2,
+                                              "passed":  false,
+                                              "diagnostics":  {
+                                                                  "WHITESPACE":  36,
+                                                                  "FINALNEWLINE":  13,
+                                                                  "CHARSET":  13
+                                                              },
+                                              "outputTail":  "D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerUpdateTests.cs(164,13): error WHITESPACE: Opravte formátování prázdných znaků. Vložit \\s\\s\\s\\s [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerUpdateTests.cs(165,13): error WHITESPACE: Opravte formátování prázdných znaků. Vložit \\s\\s\\s\\s [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerUpdateTests.cs(166,13): error WHITESPACE: Opravte formátování prázdných znaků. Vložit \\s\\s\\s\\s [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerUpdateTests.cs(167,9): error WHITESPACE: Opravte formátování prázdných znaků. Vložit \\s\\s\\s\\s [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\FullApiPerformanceTests.cs(229,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InfoControllerTests.cs(64,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InMemoryTodoRepositoryQueryTests.cs(72,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InMemoryTodoRepositoryTests.cs(64,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InMemoryTodoRepositoryWriteTests.cs(63,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\RequestValidationBoundaryTests.cs(58,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\RequestValidationTests.cs(42,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoItemTests.cs(59,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoMapperApplyToTests.cs(79,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoMapperCompletionTests.cs(64,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoMapperTests.cs(63,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerTests.cs(142,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerUpdateTests.cs(169,2): error FINALNEWLINE: Opravte odřádkování na konci. Vložit \\r\\n [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\FullApiPerformanceTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InfoControllerTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InMemoryTodoRepositoryQueryTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InMemoryTodoRepositoryTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\InMemoryTodoRepositoryWriteTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\RequestValidationBoundaryTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\RequestValidationTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoItemTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoMapperApplyToTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoMapperCompletionTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodoMapperTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]\nD:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\TodosControllerUpdateTests.cs(1,1): error CHARSET: Opravte kódování souboru. [D:\\Škola\\9.-semestr-2k26\\0VP\\0VP-26-27Z-StudentsGroup-Team-4\\tests\\UAI.ZeroVP.Tests\\UAI.ZeroVP.Tests.csproj]"
+                                          }
+                     },
+    "verification":  {
+                         "ran":  true,
+                         "buildExitCode":  0,
+                         "testExitCode":  0,
+                         "total":  85,
+                         "passed":  85,
+                         "failed":  0
+                     }
+}
