@@ -14,7 +14,7 @@ namespace UAI.ZeroVP.Tests;
 /// They cover what unit tests cannot: JSON binding, the [ApiController] validation response
 /// and the guarantee that an invalid request creates no tasks.
 /// </summary>
-public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>
+public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private const string Url = "/api/todos/repeat";
 
@@ -23,15 +23,24 @@ public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private readonly TempDir _logs = new();
+    private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
 
     public WeeklyTodosApiTests(WebApplicationFactory<Program> factory)
     {
-        // Přesměruje logy z in-memory serveru pro tento test do Tempu
-        _client = factory.WithWebHostBuilder(builder =>
-        {
-            builder.RedirectLogsToTemp();
-        }).CreateClient();
+        // Logs of this test's in-memory server go to its own temp folder, deleted after the test.
+        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
+        _client = _factory.CreateClient();
+    }
+
+    public void Dispose()
+    {
+        // Factory first (flushes and closes the log file), then the folder.
+        _client.Dispose();
+        _factory.Dispose();
+        _logs.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private static StringContent Json(string json) => new(json, Encoding.UTF8, "application/json");

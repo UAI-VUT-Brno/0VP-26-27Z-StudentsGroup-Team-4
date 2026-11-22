@@ -13,7 +13,7 @@ namespace UAI.ZeroVP.Tests;
 /// They verify the "My Tasks" view end to end: query binding, filtering, combination with
 /// the isCompleted filter and data isolation between users.
 /// </summary>
-public class TodosUserFilterApiTests : IClassFixture<WebApplicationFactory<Program>>
+public class TodosUserFilterApiTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private const string Url = "/api/todos";
 
@@ -22,15 +22,24 @@ public class TodosUserFilterApiTests : IClassFixture<WebApplicationFactory<Progr
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private readonly TempDir _logs = new();
+    private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
 
     public TodosUserFilterApiTests(WebApplicationFactory<Program> factory)
     {
-        // Přesměrujeme logy pro test do dočasné složky
-        _client = factory.WithWebHostBuilder(builder =>
-        {
-            builder.RedirectLogsToTemp();
-        }).CreateClient();
+        // Logy tohoto testu jdou do vlastní dočasné složky, která se po testu smaže.
+        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
+        _client = _factory.CreateClient();
+    }
+
+    public void Dispose()
+    {
+        // Nejdřív factory (vyprázdní a zavře soubor s logem), potom složku.
+        _client.Dispose();
+        _factory.Dispose();
+        _logs.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     // Every test uses its own unique user ids, so tests cannot affect each other

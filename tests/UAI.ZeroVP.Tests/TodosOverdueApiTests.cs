@@ -14,7 +14,7 @@ using UAI.ZeroVP.Tests.Logging;
 
 namespace UAI.ZeroVP.Tests;
 
-public sealed class TodosOverdueApiTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class TodosOverdueApiTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private const string Url = "/api/todos/overdue";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -22,15 +22,24 @@ public sealed class TodosOverdueApiTests : IClassFixture<WebApplicationFactory<P
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private readonly TempDir _logs = new();
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
     private readonly ITodoRepository _repository;
 
     public TodosOverdueApiTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsToTemp());
+        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
         _client = _factory.CreateClient();
         _repository = _factory.Services.GetRequiredService<ITodoRepository>();
+    }
+
+    public void Dispose()
+    {
+        // Factory first: it flushes and closes the log file, then the folder can be deleted.
+        _client.Dispose();
+        _factory.Dispose();
+        _logs.Dispose();
     }
 
     [Fact]
