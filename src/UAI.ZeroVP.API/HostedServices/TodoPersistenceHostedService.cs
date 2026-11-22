@@ -7,38 +7,50 @@ namespace UAI.ZeroVP.API.HostedServices;
 /// <summary>
 /// Hosted service that hooks into application startup and shutdown lifecycles
 /// to initialize the task repository from file and save tasks before process termination.
+/// <para>
+/// Shutdown saves twice, both asynchronously: an early save in <see cref="StoppingAsync"/>, which the
+/// host runs at the very beginning of the shutdown, and a final save in <see cref="StopAsync"/>, after
+/// the server has drained in-flight requests. The repository serializes the two saves.
+/// </para>
 /// </summary>
-public sealed class TodoPersistenceHostedService : IHostedService
+public sealed class TodoPersistenceHostedService : IHostedLifecycleService
 {
     private readonly ITodoRepository _repository;
-    private readonly IHostApplicationLifetime _lifetime;
     private readonly ILogger<TodoPersistenceHostedService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TodoPersistenceHostedService"/> class.
     /// </summary>
     /// <param name="repository">The task repository.</param>
-    /// <param name="lifetime">The application lifetime.</param>
     /// <param name="logger">The logger instance.</param>
     public TodoPersistenceHostedService(
         ITodoRepository repository,
-        IHostApplicationLifetime lifetime,
         ILogger<TodoPersistenceHostedService> logger)
     {
         _repository = repository;
-        _lifetime = lifetime;
         _logger = logger;
     }
+
+    /// <inheritdoc />
+    public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <inheritdoc />
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing tasks from persistent storage on service startup...");
         await _repository.LoadAsync(cancellationToken);
+    }
 
-        // We register an early save callback on ApplicationStopping to safeguard data
-        // in case the shutdown sequence is cut short before reaching hosted services.
-        _lifetime.ApplicationStopping.Register(OnApplicationStopping);
+    /// <inheritdoc />
+    public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public async Task StoppingAsync(CancellationToken cancellationToken)
+    {
+        // Early flush at the start of the shutdown, as a safeguard in case the shutdown sequence is
+        // cut short before StopAsync runs. Awaited, never blocking a thread pool thread.
+        _logger.LogInformation("Application is stopping. Performing early persistence flush...");
+        await SaveSafeAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -52,13 +64,8 @@ public sealed class TodoPersistenceHostedService : IHostedService
         await SaveSafeAsync(cancellationToken);
     }
 
-    private void OnApplicationStopping()
-    {
-        // Early flush triggered when application shutdown begins.
-        // We do not block subsequent saves so that StopAsync can capture in-flight request completions.
-        _logger.LogInformation("Application stopping hook triggered. Performing early persistence flush...");
-        SaveSafeAsync(CancellationToken.None).GetAwaiter().GetResult();
-    }
+    /// <inheritdoc />
+    public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     private async Task SaveSafeAsync(CancellationToken cancellationToken)
     {

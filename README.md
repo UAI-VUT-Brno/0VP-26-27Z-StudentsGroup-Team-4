@@ -31,7 +31,7 @@ Závislosti tvoří jednosměrný řetěz **DTO → Data → API**. Kontroler zn
 
 ## Úložiště dat
 
-Data žijí v paměťovém úložišti procesu (`ConcurrentDictionary`), které je při běžném chodu aplikace doplněno o perzistenci do souboru JSON (`JsonPersistence`). Při startu aplikace se úkoly načtou ze souboru a při ukončení se do něj automaticky uloží (`TodoPersistenceHostedService`).
+Data žijí v paměťovém úložišti procesu (`ConcurrentDictionary`), které je při běžném chodu aplikace doplněno o perzistenci do souboru JSON (`JsonPersistence`). Při startu aplikace se úkoly načtou ze souboru a při ukončení se do něj automaticky uloží (`TodoPersistenceHostedService`). Zápis je atomický: obsah se zapíše do dočasného souboru ve stejné složce a ten pak nahradí `todos.json`, takže pád nebo souběžné uložení nikdy nenechá napůl zapsaný soubor.
 
 ### Konfigurace perzistence (JsonPersistence)
 

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using UAI.ZeroVP.API.HostedServices;
@@ -40,13 +41,41 @@ public class TodoPersistenceUnitTests
             throw new FileNotFoundException("File not found", path);
         }
 
-        public Task WriteAllTextAsync(string path, string content, CancellationToken cancellationToken = default)
+        /// <summary>When set, every write waits this long, so overlapping saves become visible.</summary>
+        public TimeSpan WriteDelay { get; set; }
+
+        /// <summary>The highest number of writes that were in progress at the same time.</summary>
+        public int MaxConcurrentWrites { get; private set; }
+
+        private int _activeWrites;
+
+        public async Task WriteAllTextAsync(string path, string content, CancellationToken cancellationToken = default)
         {
-            Files[path] = content;
-            LastWrittenPath = path;
-            LastWrittenContent = content;
-            WriteCount++;
-            return Task.CompletedTask;
+            var active = Interlocked.Increment(ref _activeWrites);
+            lock (Files)
+            {
+                MaxConcurrentWrites = Math.Max(MaxConcurrentWrites, active);
+            }
+
+            try
+            {
+                if (WriteDelay > TimeSpan.Zero)
+                {
+                    await Task.Delay(WriteDelay, cancellationToken);
+                }
+
+                lock (Files)
+                {
+                    Files[path] = content;
+                    LastWrittenPath = path;
+                    LastWrittenContent = content;
+                    WriteCount++;
+                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeWrites);
+            }
         }
 
         /// <summary>When set, <see cref="Copy"/> throws it (simulates a failed backup).</summary>
@@ -82,19 +111,6 @@ public class TodoPersistenceUnitTests
         {
             Logs.Add((logLevel, formatter(state, exception), exception));
         }
-    }
-
-    private sealed class TestApplicationLifetime : IHostApplicationLifetime
-    {
-        private readonly CancellationTokenSource _stoppingCts = new();
-        private readonly CancellationTokenSource _stoppedCts = new();
-        private readonly CancellationTokenSource _startedCts = new();
-
-        public CancellationToken ApplicationStarted => _startedCts.Token;
-        public CancellationToken ApplicationStopping => _stoppingCts.Token;
-        public CancellationToken ApplicationStopped => _stoppedCts.Token;
-
-        public void StopApplication() => _stoppingCts.Cancel();
     }
 
     [Fact]
@@ -431,7 +447,7 @@ public class TodoPersistenceUnitTests
     }
 
     [Fact]
-    public async Task Shutdown_ApplicationStopping_ShouldTriggerSaveWithAllCurrentTasks()
+    public async Task Shutdown_StoppingAsync_ShouldTriggerEarlySaveWithAllCurrentTasks()
     {
         var fakeStorage = new FakeFileStorage();
         var persistenceOptions = new JsonPersistenceOptions { Enabled = true, FilePath = "test/shutdown_stopping.json" };
@@ -445,8 +461,7 @@ public class TodoPersistenceUnitTests
             persistenceOptions,
             repoLogger);
 
-        var lifetime = new TestApplicationLifetime();
-        var hostedService = new TodoPersistenceHostedService(repository, lifetime, serviceLogger);
+        var hostedService = new TodoPersistenceHostedService(repository, serviceLogger);
 
         await hostedService.StartAsync(CancellationToken.None);
 
@@ -455,7 +470,7 @@ public class TodoPersistenceUnitTests
         await repository.AddAsync(task1);
         await repository.AddAsync(task2);
 
-        lifetime.StopApplication();
+        await hostedService.StoppingAsync(CancellationToken.None);
 
         Assert.Equal(1, fakeStorage.WriteCount);
         Assert.Equal(persistenceOptions.FilePath, fakeStorage.LastWrittenPath);
@@ -465,6 +480,59 @@ public class TodoPersistenceUnitTests
         Assert.Equal(2, savedTasks.Count);
         Assert.Contains(savedTasks, t => t.Id == task1.Id && t.Title == "Task Alpha");
         Assert.Contains(savedTasks, t => t.Id == task2.Id && t.Title == "Task Beta");
+    }
+
+    // --- 0VP-T4-F12: serialized saves, async shutdown hooks ---------------------------
+
+    [Fact]
+    public async Task SaveAsync_ConcurrentCalls_AreSerialized_AndTheLastWriteHasTheNewestData()
+    {
+        var storage = new FakeFileStorage { WriteDelay = TimeSpan.FromMilliseconds(20) };
+        var repository = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = false },
+            TimeProvider.System,
+            storage,
+            new JsonPersistenceOptions { Enabled = true, FilePath = "test/concurrent_save.json" },
+            new TestLogger<InMemoryTodoRepository>());
+
+        var saves = Enumerable.Range(0, 8).Select(_ => Task.Run(() => repository.SaveAsync())).ToList();
+        await repository.AddAsync(new TodoItem { Id = Guid.NewGuid(), Title = "Added during the saves", CreatedAtUtc = DateTimeOffset.UtcNow });
+        await repository.SaveAsync();
+        await Task.WhenAll(saves);
+
+        Assert.Equal(1, storage.MaxConcurrentWrites);
+        Assert.Equal(9, storage.WriteCount);
+        var saved = JsonSerializer.Deserialize<List<TodoItem>>(storage.LastWrittenContent!, JsonOptions)!;
+        Assert.Contains(saved, task => task.Title == "Added during the saves");
+    }
+
+    [Fact]
+    public async Task RealHost_StopAsync_RunsTheEarlyAndTheFinalSave()
+    {
+        var storage = new FakeFileStorage();
+        var repository = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = false },
+            TimeProvider.System,
+            storage,
+            new JsonPersistenceOptions { Enabled = true, FilePath = "test/real_host.json" },
+            new TestLogger<InMemoryTodoRepository>());
+
+        using var host = Host.CreateDefaultBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<UAI.ZeroVP.Data.Abstractions.ITodoRepository>(repository);
+                services.AddHostedService<TodoPersistenceHostedService>();
+            })
+            .Build();
+
+        await host.StartAsync();
+        await repository.AddAsync(new TodoItem { Id = Guid.NewGuid(), Title = "Saved on shutdown", CreatedAtUtc = DateTimeOffset.UtcNow });
+        await host.StopAsync();
+
+        // StoppingAsync (early) and StopAsync (final): both awaited by the host, no blocking callback.
+        Assert.Equal(2, storage.WriteCount);
+        var saved = JsonSerializer.Deserialize<List<TodoItem>>(storage.LastWrittenContent!, JsonOptions)!;
+        Assert.Single(saved, task => task.Title == "Saved on shutdown");
     }
 
     [Fact]
@@ -482,8 +550,7 @@ public class TodoPersistenceUnitTests
             persistenceOptions,
             repoLogger);
 
-        var lifetime = new TestApplicationLifetime();
-        var hostedService = new TodoPersistenceHostedService(repository, lifetime, serviceLogger);
+        var hostedService = new TodoPersistenceHostedService(repository, serviceLogger);
 
         await hostedService.StartAsync(CancellationToken.None);
 
