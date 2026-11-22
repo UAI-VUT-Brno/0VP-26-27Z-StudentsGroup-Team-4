@@ -25,4 +25,8 @@ public sealed class PhysicalFileStorage : IFileStorage
 
         await File.WriteAllTextAsync(path, content, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public void Copy(string sourcePath, string destinationPath) =>
+        File.Copy(sourcePath, destinationPath, overwrite: false);
 }

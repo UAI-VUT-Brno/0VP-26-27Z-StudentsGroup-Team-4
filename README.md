@@ -56,6 +56,19 @@ JsonPersistence__Enabled=true
 JsonPersistence__FilePath=data/todos.json
 ```
 
+Při startu ve výchozím (nesdíleném) režimu:
+
+- chybějící soubor není chyba: aplikace začne s ukázkovými daty (`Todo__SeedSampleData=true`) nebo prázdná
+  a soubor vytvoří při ukončení; log uvádí skutečný počet úkolů v paměti;
+- prázdné položky (`null`) v poli se přeskočí s varováním, ostatní úkoly ze souboru se načtou;
+- poškozený soubor (neplatný JSON) se zaloguje (`corrupted`), zkopíruje do `todos.json.corrupt-<čas>`
+  a aplikace začne s prázdným stavem. Uložení při ukončení pak původní data nezničí, zůstanou v kopii.
+  Když se kopie nepovede (např. složka jen pro čtení), aplikace soubor **nepřepíše** ani při ukončení,
+  aby šla data obnovit ručně; v logu je chyba „Tasks were not saved“;
+- soubor, který nejde přečíst (zamčený jiným procesem nebo antivirem, odepřený přístup), aplikace
+  při ukončení také **nepřepíše**: na disku je v pořádku a prázdný stav z paměti by ho zničil.
+  Změny z takového běhu se neuloží, v logu je opět „Tasks were not saved“.
+
 ### Sdílené úložiště (více instancí, jedna databáze)
 
 Ve výchozím režimu drží každý proces data v paměti a do souboru je zapíše až při ukončení, takže dvě

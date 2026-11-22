@@ -127,6 +127,27 @@ public sealed class TodoPersistenceIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task EdgeCase_PhysicallyCorruptedFile_IsBackedUpOnDisk_AndSurvivesTheShutdownSave()
+    {
+        const string corrupted = "<<<corrupted raw data that is not valid json>>>";
+        await File.WriteAllTextAsync(_tempFilePath, corrupted);
+
+        var repo = new InMemoryTodoRepository(
+            new InMemoryTodoOptions { SeedSampleData = false },
+            TimeProvider.System,
+            _storage,
+            _options,
+            new TestLogger<InMemoryTodoRepository>());
+
+        await repo.LoadAsync();
+        await repo.SaveAsync(); // shutdown save overwrites todos.json with the current (empty) state
+
+        var backup = Assert.Single(Directory.GetFiles(_tempDirectory, "todos.json.corrupt-*"));
+        Assert.Equal(corrupted, await File.ReadAllTextAsync(backup));
+        Assert.Equal("[]", (await File.ReadAllTextAsync(_tempFilePath)).Trim());
+    }
+
+    [Fact]
     public async Task EdgeCase_FileDoesNotExistInitially_ShouldBeCreatedUponFirstSave()
     {
         Assert.False(File.Exists(_tempFilePath));

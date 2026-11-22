@@ -14,4 +14,7 @@ public interface IFileStorage
 
     /// <summary>Asynchronously writes the specified string content to a file, creating target directories if needed.</summary>
     Task WriteAllTextAsync(string path, string content, CancellationToken cancellationToken = default);
+
+    /// <summary>Copies an existing file to a new file; an existing destination file is never overwritten.</summary>
+    void Copy(string sourcePath, string destinationPath);
 }
