@@ -35,16 +35,19 @@ files live under `.claude/skills/issue-to-pr/rules/`):
 | Tool | Allowed | Purpose |
 |------|:---:|---------|
 | file read under `src/` and `tests/` | ✅ | Understand existing code before changing it. |
-| file read (read-only) `skills/issue-to-pr/rules/**`, `.editorconfig` | ✅ | Load the rules you must follow. |
+| file read (read-only) `skills/issue-to-pr/rules/**`, its synchronized copy `.claude/skills/issue-to-pr/rules/**`, `.editorconfig` | ✅ | Load the rules you must follow. |
 | file write / edit, **only** under `src/` and `tests/` | ✅ | Implement the plan. |
 | `git add <explicit paths under src/ or tests/>` | ✅ | Stage your own changes. |
 | `git commit -m "<message>"` | ✅ | Record them, following `repo-conventions.md` §2. |
 | `git status` | ✅ (read-only) | Confirm branch, staged set and that nothing outside scope changed. |
+| `git diff --cached --name-only` | ✅ (read-only) | Confirm the exact staged set before each commit. |
 | `dotnet build` | ✅ (verify only) | Prove the code compiles. |
 | `dotnet format UAI.ZeroVP.sln --include <own changed files>` | ✅ (fix, own files only) | Normalise BOM, CRLF, indentation, final newline of the files this run changed. |
-| `dotnet format UAI.ZeroVP.sln --verify-no-changes --include <own changed files>` | ✅ (verify only) | Static `.editorconfig` conformance gate. |
-| `dotnet format` without `--include` | ❌ | Would rewrite files outside your plan. |
+| `dotnet format UAI.ZeroVP.sln --verify-no-changes` (with `--no-restore` after a build) | ✅ (verify only) | Static `.editorconfig` conformance gate over the whole solution, the same command as CI. |
+| `dotnet format` in fix mode (without `--verify-no-changes`) and without `--include` | ❌ | Would rewrite files outside your plan. |
+| `dotnet test` | ❌ | Running and repairing the test suite is Stage 3's job. |
 | `git add .` / `-A` / `commit -a` | ❌ | Could stage files outside your scope. |
+| `git reset`, `git restore`, `git stash`, `git revert`, `git rebase`, `git commit --amend` | ❌ | No unstaging, no discarding and no rewriting of history; report the state instead. |
 | `git checkout -b`, `git branch`, `git switch` | ❌ | Branch creation belongs to Stage 1. |
 | `git push` | ❌ | Remote writes belong to Stage 4. |
 | any `gh` command | ❌ | GitHub access belongs to Stages 1 and 4. |
@@ -64,7 +67,8 @@ and the formatter, so these are added, deliberately limited:
 
 - `dotnet build` and `--verify-no-changes` write nothing tracked (build output is git-ignored).
 - `dotnet format ... --include` rewrites only files this run created or changed.
-- `git status` is read-only and is how you confirm the branch and the staged set.
+- `git status` and `git diff --cached --name-only` are read-only and are how you
+  confirm the branch and the staged set.
 
 ### 2.2 Enforcement
 
@@ -78,13 +82,21 @@ current documentation of the client in use):
 {
   "permissions": {
     "allow": [
-      "Read(src/**)", "Read(tests/**)", "Edit(src/**)", "Edit(tests/**)",
-      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status)",
+      "Read(src/**)", "Read(tests/**)", "Read(skills/issue-to-pr/rules/**)",
+      "Read(.claude/skills/issue-to-pr/rules/**)", "Read(.editorconfig)",
+      "Edit(src/**)", "Edit(tests/**)",
+      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)",
+      "Bash(git diff --cached --name-only)",
       "Bash(dotnet build:*)", "Bash(dotnet format:*)"
     ],
     "deny": [
+      "Edit(.github/**)", "Edit(docs/**)", "Edit(README.md)", "Edit(skills/**)",
+      "Edit(.claude/**)", "Edit(.editorconfig)", "Edit(*.sln)", "Edit(Directory.Build.props)",
       "Bash(git push:*)", "Bash(git checkout:*)", "Bash(git switch:*)",
-      "Bash(git branch:*)", "Bash(gh:*)"
+      "Bash(git branch:*)", "Bash(git reset:*)", "Bash(git restore:*)",
+      "Bash(git stash:*)", "Bash(git revert:*)", "Bash(git rebase:*)",
+      "Bash(git commit --amend:*)", "Bash(git commit -a:*)", "Bash(git add .)",
+      "Bash(git add -A:*)", "Bash(dotnet test:*)", "Bash(gh:*)"
     ]
   }
 }
@@ -134,6 +146,16 @@ branch name shown); if `src/` or `tests/` is dirty, stop with
 `ERR_DIRTY_WORKING_TREE` (include the raw output). Do not try to switch branches
 or clean the tree.
 
+Then check that the formatting baseline is clean before you change anything:
+
+```bash
+dotnet format UAI.ZeroVP.sln --verify-no-changes
+```
+
+If it fails, the violations are not yours. Stop with `ERR_BASELINE_NOT_CLEAN` and
+list the reported files and diagnostic ids. Do not fix them. This way the
+whole-solution gate in step 4 can only fail on what this run changed.
+
 ### Step 3 - Implement bottom-up, layer by layer
 
 Always in dependency order, so each layer compiles against the previous one:
@@ -158,12 +180,15 @@ reports under `src/` and `tests/`).
 ```bash
 dotnet format UAI.ZeroVP.sln --include <files>
 dotnet build UAI.ZeroVP.sln --configuration Release
-dotnet format UAI.ZeroVP.sln --verify-no-changes --include <files>
+dotnet format UAI.ZeroVP.sln --verify-no-changes --no-restore
 ```
 
 1. The first command fixes BOM, line endings, indentation and final newline in
    your own files only. If it also reformats pre-existing lines of a file you edited,
    keep it (the file must conform) and mention that file under `warnings`.
+   The third command is the gate. It checks the whole solution with exactly the
+   command CI runs (`.github/workflows/ci.yml`, step "Verify formatting"), so a pass
+   here means the formatting step of CI passes too.
 2. A failing build is fixed in code, then step 4 starts again from the top.
 3. A failing verify is analysed by the **diagnostic id** (`WHITESPACE`,
    `FINALNEWLINE`, `CHARSET`, `ENDOFLINE`, ...) and the file path in the output,
@@ -171,8 +196,9 @@ dotnet format UAI.ZeroVP.sln --verify-no-changes --include <files>
 4. You have **at most 3** attempts per failure. After that stop with
    `ERR_BUILD_FAILED` or `ERR_FORMAT_CHECK_FAILED`, include the raw tool output, and
    do **not** commit.
-5. Violations in files you did not touch (the repository may contain old ones) are
-   not yours: do not fix them, do not fail on them.
+5. The baseline was clean in step 2, so every violation the gate reports comes from
+   this run. Fix it only through your own files: never edit a file outside your plan
+   to make the gate pass.
 6. Do not run the test suite; running and repairing tests is Stage 3's job.
 
 ### Step 5 - Commit
@@ -181,10 +207,16 @@ Only when the last full run of step 4 (all three commands, started after your la
 edit) succeeded:
 
 1. Commit production code first: `git add <explicit src/ paths>`, then
+   `git diff --cached --name-only`. The output must list exactly the `src/` paths you
+   meant to stage and nothing else. Then
    `git commit -m "feat: <imperative summary> (#<issueNumber>)"`
    (`fix:` for bug-fix issues).
-2. Commit tests separately: `git add <explicit tests/ paths>`, then
+2. Commit tests separately: `git add <explicit tests/ paths>`, check the staged set
+   with `git diff --cached --name-only` the same way (only `tests/` paths), then
    `git commit -m "test: <imperative summary> (#<issueNumber>)"`.
+
+If the staged set contains anything you did not mean to stage, do not commit and do
+not try to unstage it. Stop with `ERR_UNEXPECTED_STAGED_FILES` and list the paths.
 3. Subject <= 72 characters, lowercase after the colon, imperative - as defined in
    `skills/issue-to-pr/rules/repo-conventions.md` §2, nowhere else. That file makes the
    issue number optional; you always add it, because the plan provides it.
@@ -238,8 +270,10 @@ the gate passed.
 | `ERR_PLAN_INSUFFICIENT` | The plan is too vague to implement without guessing. |
 | `ERR_WRONG_BRANCH` | The current branch is not the `branchName` from Stage 1. |
 | `ERR_DIRTY_WORKING_TREE` | Files under `src/` or `tests/` are modified or staged at the start. |
+| `ERR_BASELINE_NOT_CLEAN` | `dotnet format UAI.ZeroVP.sln --verify-no-changes` fails in step 2, before any edit. |
 | `ERR_BUILD_FAILED` | `dotnet build` still fails after 3 attempts. |
-| `ERR_FORMAT_CHECK_FAILED` | The `--verify-no-changes --include` gate still fails after 3 attempts. |
+| `ERR_FORMAT_CHECK_FAILED` | The whole-solution `--verify-no-changes` gate still fails after 3 attempts. |
+| `ERR_UNEXPECTED_STAGED_FILES` | `git diff --cached --name-only` shows paths you did not mean to stage. |
 | `ERR_COMMIT_FAILED` | `git commit` failed (for example empty commit or hook rejection). |
 
 Per the orchestrator's rules (`SKILL.md` §5-6), on `status: failed` the pipeline
@@ -249,21 +283,35 @@ stops and Stage 3 never runs.
 
 Issue #21, *"Add todo version concurrency"*.
 
-1. Read `architecture.md` §4.1, `repo-conventions.md` §2 and `.editorconfig`, then
-   `TodoItem.cs`, `ITodoRepository.cs`, both repositories, `TodosController.cs`.
-2. `git status` -> on `feat/t3-21-add-todo-version-concurrency`, `src/` and `tests/` clean.
-3. DTO: add `Version` to `TodoItemDto`; add `[Range(1, int.MaxValue)] Version` to
-   `UpdateTodoItemRequest`.
+1. Read `skills/issue-to-pr/rules/architecture.md` §4.1,
+   `skills/issue-to-pr/rules/repo-conventions.md` §2 and `.editorconfig`, then
+   `src/UAI.ZeroVP.Data/Entities/TodoItem.cs`,
+   `src/UAI.ZeroVP.Data/Abstractions/ITodoRepository.cs`, both repositories
+   (`src/UAI.ZeroVP.Data/InMemory/InMemoryTodoRepository.cs` and the shared JSON
+   repository in `src/UAI.ZeroVP.Data/Persistence/`) and
+   `src/UAI.ZeroVP.API/Controllers/TodosController.cs`.
+2. `git status` -> on `feat/t3-21-add-todo-version-concurrency`, `src/` and `tests/`
+   clean; `dotnet format UAI.ZeroVP.sln --verify-no-changes` passes (clean baseline).
+3. DTO: add `Version` to `src/UAI.ZeroVP.DTO/TodoItemDto.cs`; add
+   `[Range(1, int.MaxValue)] Version` to `src/UAI.ZeroVP.DTO/UpdateTodoItemRequest.cs`.
 4. Data: add `Version` to `TodoItem` (+ `Clone()`), add `TodoUpdateResult`, change
    `UpdateAsync(TodoItem, int expectedVersion, ...)` in the interface, in
    `InMemoryTodoRepository` (compare-and-swap) and in the shared JSON repository
    (check inside the file lock; missing `Version` in old files reads as `1`).
-5. API: `TodoMapper.ToDto` maps `Version`; `TodosController.Update` passes
-   `request.Version`, maps `NotFound` -> `404` and `VersionConflict` -> `409`
-   `ProblemDetails`; add `[ProducesResponseType]` and `<response>` for both.
-6. Tests: repository conflict/increment tests, controller `409` test.
-7. Step 4: `dotnet format --include <files>` normalises the files, `dotnet build`
-   passes, `dotnet format --verify-no-changes --include <files>` passes.
-8. `git add src/...` -> `git commit -m "feat: add optimistic concurrency to todo updates (#21)"`;
-   `git add tests/...` -> `git commit -m "test: cover version conflicts in todo updates (#21)"`.
+5. API: `src/UAI.ZeroVP.API/Mapping/TodoMapper.cs` maps `Version`.
+   `TodosController.Update` passes `request.Version`. `TodosController.Complete`
+   also writes through `UpdateAsync`, so it must change too: it passes the
+   `Version` of the item it has just read, and a change by someone else between
+   that read and the write becomes `VersionConflict`. Both actions map `NotFound`
+   -> `404` and `VersionConflict` -> `409` `ProblemDetails`; add
+   `[ProducesResponseType]` and `<response>` for both codes on both actions.
+6. Tests: repository conflict/increment tests, controller `409` tests for `Update`
+   and `Complete` (e.g. in `tests/UAI.ZeroVP.Tests/TodosControllerUpdateTests.cs`).
+7. Step 4: `dotnet format UAI.ZeroVP.sln --include <files>` normalises the files,
+   `dotnet build` passes, `dotnet format UAI.ZeroVP.sln --verify-no-changes --no-restore`
+   passes.
+8. `git add src/...` -> `git diff --cached --name-only` lists only those `src/` files ->
+   `git commit -m "feat: add optimistic concurrency to todo updates (#21)"`;
+   `git add tests/...` -> `git diff --cached --name-only` lists only `tests/` files ->
+   `git commit -m "test: cover version conflicts in todo updates (#21)"`.
 9. Return `status: ok` with both commits and `checks` passed.
