@@ -11,7 +11,7 @@ public class TodoMapperTests
     [Fact]
     public void ToEntity_TrimsTitle()
     {
-        var request = new CreateTodoItemRequest { Title = "  Write test  " };
+        var request = new CreateTodoItemRequest { Title = "  Write test  ", UserId = "user-1" };
 
         var entity = request.ToEntity(Now);
 
@@ -21,7 +21,7 @@ public class TodoMapperTests
     [Fact]
     public void ToEntity_BlankDescription_BecomesNull()
     {
-        var request = new CreateTodoItemRequest { Title = "A", Description = "   " };
+        var request = new CreateTodoItemRequest { Title = "A", UserId = "user-1", Description = "   " };
 
         var entity = request.ToEntity(Now);
 
@@ -31,19 +31,29 @@ public class TodoMapperTests
     [Fact]
     public void ToEntity_NewTask_IsNotCompleted()
     {
-        var request = new CreateTodoItemRequest { Title = "A" };
+        var request = new CreateTodoItemRequest { Title = "A", UserId = "user-1" };
 
         var entity = request.ToEntity(Now);
 
+        Assert.Equal("user-1", entity.UserId);
         Assert.False(entity.IsCompleted);
         Assert.Null(entity.CompletedAtUtc);
         Assert.Equal(Now, entity.CreatedAtUtc);
     }
 
     [Fact]
+    public void ToDto_AndClone_PreserveUserId()
+    {
+        var entity = new CreateTodoItemRequest { Title = "A", UserId = "user-1" }.ToEntity(Now);
+
+        Assert.Equal("user-1", entity.Clone().UserId);
+        Assert.Equal("user-1", entity.ToDto().UserId);
+    }
+
+    [Fact]
     public void SetCompletionState_Completing_SetsCompletedAt()
     {
-        var entity = new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = Now };
+        var entity = new TodoItem { Id = Guid.NewGuid(), UserId = "user-1", Title = "A", CreatedAtUtc = Now };
 
         entity.SetCompletionState(isCompleted: true, Now);
 

@@ -25,6 +25,7 @@ public class TodosControllerUpdateTests
     private static TodoItem CreateItem(string title, bool isCompleted = false) => new()
     {
         Id = Guid.NewGuid(),
+        UserId = "user-1",
         Title = title,
         CreatedAtUtc = DateTimeOffset.UtcNow,
         IsCompleted = isCompleted,
@@ -49,6 +50,7 @@ public class TodosControllerUpdateTests
         var dto = Assert.IsType<TodoItemDto>(ok.Value);
         Assert.Equal("New", dto.Title);
         Assert.Equal("Details", dto.Description);
+        Assert.Equal("user-1", dto.UserId);
         Assert.Equal(TodoPriority.High, dto.Priority);
         Assert.True(dto.IsCompleted);
         Assert.NotNull(dto.CompletedAtUtc);

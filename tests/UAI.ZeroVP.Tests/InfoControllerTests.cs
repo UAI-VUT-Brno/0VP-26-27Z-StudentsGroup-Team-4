@@ -45,8 +45,8 @@ public class InfoControllerTests
     public async Task Get_ReportsNumberOfTasksInMemory()
     {
         var repository = new InMemoryTodoRepository(new InMemoryTodoOptions { SeedSampleData = false });
-        await repository.AddAsync(new TodoItem { Id = Guid.NewGuid(), Title = "A", CreatedAtUtc = DateTimeOffset.UtcNow });
-        await repository.AddAsync(new TodoItem { Id = Guid.NewGuid(), Title = "B", CreatedAtUtc = DateTimeOffset.UtcNow });
+        await repository.AddAsync(new TodoItem { Id = Guid.NewGuid(), UserId = "test", Title = "A", CreatedAtUtc = DateTimeOffset.UtcNow });
+        await repository.AddAsync(new TodoItem { Id = Guid.NewGuid(), UserId = "test", Title = "B", CreatedAtUtc = DateTimeOffset.UtcNow });
 
         var info = await GetInfoAsync(repository, "Testing");
 

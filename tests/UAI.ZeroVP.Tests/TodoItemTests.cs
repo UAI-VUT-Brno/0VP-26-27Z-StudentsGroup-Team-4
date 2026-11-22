@@ -8,6 +8,7 @@ public class TodoItemTests
     private static TodoItem CreateItem() => new()
     {
         Id = Guid.NewGuid(),
+        UserId = "test",
         Title = "Original",
         Description = "Some description",
         Priority = TodoPriority.High,
@@ -24,6 +25,7 @@ public class TodoItemTests
         var clone = original.Clone();
 
         Assert.Equal(original.Id, clone.Id);
+        Assert.Equal(original.UserId, clone.UserId);
         Assert.Equal(original.Title, clone.Title);
         Assert.Equal(original.Description, clone.Description);
         Assert.Equal(original.Priority, clone.Priority);

@@ -18,6 +18,7 @@ public class InMemoryTodoRepositoryQueryTests
         int hoursAfterStart = 0) => new()
     {
         Id = Guid.NewGuid(),
+        UserId = "test",
         Title = title,
         Priority = priority,
         IsCompleted = isCompleted,

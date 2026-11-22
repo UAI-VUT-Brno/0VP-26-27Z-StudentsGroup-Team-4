@@ -176,6 +176,7 @@ namespace UAI.ZeroVP.Tests
         private static CreateTodoItemRequest CreateBody() => new()
         {
             Title = "Perf test",
+            UserId = "performance-test",
             Description = "Úkol vytvořený výkonnostním testem.",
             Priority = TodoPriority.Normal
         };

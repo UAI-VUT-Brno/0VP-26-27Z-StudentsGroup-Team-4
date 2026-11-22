@@ -26,6 +26,7 @@ public class TodosControllerTests
         var item = new TodoItem
         {
             Id = Guid.NewGuid(),
+            UserId = "user-1",
             Title = title,
             CreatedAtUtc = DateTimeOffset.UtcNow,
             IsCompleted = isCompleted,
@@ -68,13 +69,14 @@ public class TodosControllerTests
     [Fact]
     public async Task Create_ValidRequest_ReturnsCreatedAndStoresTask()
     {
-        var request = new CreateTodoItemRequest { Title = "  New task  " };
+        var request = new CreateTodoItemRequest { Title = "  New task  ", UserId = "user-1" };
 
         var result = await CreateController().Create(request, CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtRouteResult>(result.Result);
         var dto = Assert.IsType<TodoItemDto>(created.Value);
         Assert.Equal("New task", dto.Title);
+        Assert.Equal("user-1", dto.UserId);
         Assert.Equal(1, await _repository.CountAsync());
     }
 

@@ -11,7 +11,7 @@ public class RequestValidationBoundaryTests
     [Fact]
     public void CreateRequest_ValidRequest_IsValid()
     {
-        var request = new CreateTodoItemRequest { Title = "OK", Description = "Some text", Priority = TodoPriority.High };
+        var request = new CreateTodoItemRequest { Title = "OK", UserId = "user-1", Description = "Some text", Priority = TodoPriority.High };
 
         Assert.True(IsValid(request));
     }
@@ -19,7 +19,7 @@ public class RequestValidationBoundaryTests
     [Fact]
     public void CreateRequest_WhitespaceTitle_IsInvalid()
     {
-        var request = new CreateTodoItemRequest { Title = "   " };
+        var request = new CreateTodoItemRequest { Title = "   ", UserId = "user-1" };
 
         Assert.False(IsValid(request));
     }
@@ -27,7 +27,7 @@ public class RequestValidationBoundaryTests
     [Fact]
     public void CreateRequest_Title200Characters_IsValid()
     {
-        var request = new CreateTodoItemRequest { Title = new string('a', 200) };
+        var request = new CreateTodoItemRequest { Title = new string('a', 200), UserId = "user-1" };
 
         Assert.True(IsValid(request));
     }
@@ -35,7 +35,7 @@ public class RequestValidationBoundaryTests
     [Fact]
     public void CreateRequest_DescriptionLongerThan1000Characters_IsInvalid()
     {
-        var request = new CreateTodoItemRequest { Title = "A", Description = new string('b', 1001) };
+        var request = new CreateTodoItemRequest { Title = "A", UserId = "user-1", Description = new string('b', 1001) };
 
         Assert.False(IsValid(request));
     }
@@ -43,7 +43,7 @@ public class RequestValidationBoundaryTests
     [Fact]
     public void CreateRequest_UndefinedPriority_IsInvalid()
     {
-        var request = new CreateTodoItemRequest { Title = "A", Priority = (TodoPriority)99 };
+        var request = new CreateTodoItemRequest { Title = "A", UserId = "user-1", Priority = (TodoPriority)99 };
 
         Assert.False(IsValid(request));
     }

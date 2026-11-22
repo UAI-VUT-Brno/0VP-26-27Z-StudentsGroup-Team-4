@@ -11,6 +11,7 @@ public class InMemoryTodoRepositoryWriteTests
     private static TodoItem CreateItem(string title = "Before") => new()
     {
         Id = Guid.NewGuid(),
+        UserId = "test",
         Title = title,
         CreatedAtUtc = DateTimeOffset.UtcNow
     };

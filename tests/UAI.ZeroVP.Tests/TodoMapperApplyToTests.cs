@@ -12,6 +12,7 @@ public class TodoMapperApplyToTests
     private static TodoItem CreateItem(bool isCompleted = false) => new()
     {
         Id = Guid.NewGuid(),
+        UserId = "user-1",
         Title = "Old title",
         Priority = TodoPriority.Low,
         CreatedAtUtc = Created,
@@ -67,10 +68,12 @@ public class TodoMapperApplyToTests
     {
         var item = CreateItem();
         var originalId = item.Id;
+        var originalUserId = item.UserId;
 
         new UpdateTodoItemRequest { Title = "Different" }.ApplyTo(item, Later);
 
         Assert.Equal(originalId, item.Id);
+        Assert.Equal(originalUserId, item.UserId);
         Assert.Equal(Created, item.CreatedAtUtc);
     }
 }

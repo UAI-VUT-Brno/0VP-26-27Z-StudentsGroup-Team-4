@@ -11,6 +11,7 @@ public class TodoMapperCompletionTests
     private static TodoItem CreateItem(bool isCompleted) => new()
     {
         Id = Guid.NewGuid(),
+        UserId = "test",
         Title = "A",
         CreatedAtUtc = Created,
         IsCompleted = isCompleted,
