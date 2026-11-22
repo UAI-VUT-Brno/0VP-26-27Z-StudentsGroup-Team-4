@@ -23,3 +23,6 @@ appsettings.*.local.json
 *.log
 logs/
 data/
+
+## Claude Code - lokální nastavení (sdílí se jen .claude/skills a .claude/agents)
+.claude/settings.local.json

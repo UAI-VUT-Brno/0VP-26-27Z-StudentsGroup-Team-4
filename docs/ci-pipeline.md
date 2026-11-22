@@ -1,11 +1,14 @@
 # CI pipeline a bezpečnostní skenování (DevSecOps)
 
-Repozitář používá GitHub Actions (`.github/workflows/ci.yml`). Pipeline se spouští při `push` do větví `main`, `feature/**`, `feat/**`, `fix/**`, `perf/**` a při pull requestech do `main`. Větev `perf/**` je jen další pojmenovací konvence (stejně jako `feature/**`/`fix/**`) pro práci na výkonnostních úpravách – spouští běžný `build-and-test` job, ne výkonnostní testy. Skládá se ze dvou paralelních jobů:
+Repozitář používá GitHub Actions (`.github/workflows/ci.yml`). Pipeline se spouští při `push` do větví `main`, `feature/**`, `feat/**`, `fix/**`, `perf/**` a při pull requestech do `main`. Větev `perf/**` je jen další pojmenovací konvence (stejně jako `feature/**`/`fix/**`) pro práci na výkonnostních úpravách – spouští běžný `build-and-test` job, ne výkonnostní testy. Skládá se ze tří paralelních jobů:
 
 | Job | Co dělá |
 |---|---|
-| `build-and-test` | Restore, kontrola formátování podle `.editorconfig` (`dotnet format --verify-no-changes`), build v konfiguraci Release a unit testy (bez kategorie `Performance`). Oba joby mají nastavena práva `contents: read` (least privilege). |
+| `build-and-test` | Restore, kontrola formátování podle `.editorconfig` (`dotnet format --verify-no-changes`), build v konfiguraci Release a unit testy (bez kategorie `Performance`). |
+| `skills-sync-check` | Ověří, že vygenerovaná kopie skillu `/issue-to-pr` v `.claude/skills/` a `.claude/agents/` odpovídá zdroji ve `skills/` (`bash scripts/sync-claude-skills.sh --check`). Po změně ve `skills/issue-to-pr/` je potřeba spustit `scripts/sync-claude-skills.sh` a výsledek commitnout, jinak job selže. |
 | `security-scan` | Bezpečnostní brána: spouští `scripts/security-scan.ps1`. Při jakémkoli nálezu job selže. |
+
+Všechny joby mají nastavena práva `contents: read` (least privilege).
 
 ## Výkonnostní testy
 
