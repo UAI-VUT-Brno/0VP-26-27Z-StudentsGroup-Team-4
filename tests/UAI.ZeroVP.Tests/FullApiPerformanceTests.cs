@@ -16,8 +16,10 @@ using Xunit.Abstractions;
 namespace UAI.ZeroVP.Tests
 {
     [Trait("Category", "Performance")]
-    public class FullApiPerformanceTests : IClassFixture<WebApplicationFactory<Program>>
+    public class FullApiPerformanceTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
     {
+        private readonly TempDir _logs = new();
+        private readonly WebApplicationFactory<Program> _factory;
         private readonly HttpClient _client;
         private readonly ITestOutputHelper _output;
         private const int MaxResponseTimeMs = 500;
@@ -36,15 +38,22 @@ namespace UAI.ZeroVP.Tests
 
         public FullApiPerformanceTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
         {
-            // Zápis do souboru přesměrujeme do Tempu, aby testy nepsaly logy do repozitáře.
-            // (RedirectLogsToTemp mění jen cílovou složku souborového loggeru - nekonfiguruje
-            // žádný console logger; logování jako takové je stejné jako v Program.cs.)
-            _client = factory.WithWebHostBuilder(builder =>
-            {
-                builder.RedirectLogsToTemp();
-            }).CreateClient();
+            // Zápis do souboru přesměrujeme do vlastní dočasné složky, aby testy nepsaly logy
+            // do repozitáře; po testu se smaže. (RedirectLogsTo mění jen cílovou složku
+            // souborového loggeru – logování jako takové je stejné jako v Program.cs.)
+            _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
+            _client = _factory.CreateClient();
 
             _output = output;
+        }
+
+        public void Dispose()
+        {
+            // Nejdřív factory (vyprázdní a zavře soubor s logem), potom složku.
+            _client.Dispose();
+            _factory.Dispose();
+            _logs.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         // Všechny endpointy z issue. {id} se při testu nahradí id skutečně vytvořeného úkolu.

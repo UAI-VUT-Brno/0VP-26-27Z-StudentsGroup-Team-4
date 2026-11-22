@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using UAI.ZeroVP.API.Instances;
-using UAI.ZeroVP.Tests.Logging; // Přidáno pro LogTestHelpers
 
 namespace UAI.ZeroVP.Tests;
 
@@ -19,9 +18,7 @@ public sealed class InstanceStartupTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls(url);
 
-        // PŘIDÁNO: Přesměrujeme případné logy načtené z appsettings do dočasné složky
-        builder.WebHost.RedirectLogsToTemp();
-
+        // A bare host without AddApplicationLogging: there is no file logger to redirect.
         builder.Logging.ClearProviders();
 
         var app = builder.Build();
