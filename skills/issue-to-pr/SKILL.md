@@ -266,6 +266,16 @@ fails when `skills/` and `.claude/` drift apart. After any change under
 `skills/issue-to-pr/`, run the sync script and commit the result together
 with the source change.
 
+The `tools:` frontmatter of every subagent must list Claude Code tool names
+(`Read`, `Glob`, `Grep`, `Edit`, `Write`, `Bash`). Claude Code refuses to
+spawn an agent whose list resolves to no known tool. The command-level limits
+of each stage stay in that agent's §2 table, and the frontmatter cannot narrow
+`Bash` to single commands. For an unattended run they are enforced for the
+whole session by `.claude/issue-to-pr.settings.json`
+(`claude --settings .claude/issue-to-pr.settings.json -p "/issue-to-pr #<n>"`).
+That file is the union of the per-stage allow-lists plus a deny list. It is
+not `.claude/settings.json`, so it does not restrict interactive sessions.
+
 End-to-end verification of the four-stage routing is recorded in
 `docs/issue-to-pr-e2e-verification.md`.
 

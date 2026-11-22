@@ -14,10 +14,10 @@ during the run invalidates it.
 |---|-------|-----|
 | 1 | The final-newline cleanup is merged | `tail -c1 <file> \| xxd` is `0a` for the three files listed in `methodology.md` section 3 |
 | 2 | Working tree is clean | `git status --porcelain` prints **nothing**. Stage 1 treats untracked files as dirty (`ERR_DIRTY_WORKING_TREE`) |
-| 3 | The skill is discoverable by Claude Code | `scripts/sync-claude-skills.ps1`, then `-Check` exits `0` |
-| 4 | The generated `.claude/` copy does not make the tree dirty | It is untracked and not ignored today; commit it or ignore it first (open item in `skills/issue-to-pr/SKILL.md` section 8) |
-| 5 | Subagent registration is settled | Open item in `SKILL.md` section 8; note in the transcript README how the agents are invoked |
-| 6 | Permissions are pre-approved | Configure the allow-list from `qa-self-healing.md` section 2.2 (and the equivalent for the other stages) so no approval prompt appears |
+| 3 | The skill and its subagents are discoverable by Claude Code | `bash scripts/sync-claude-skills.sh --check` (or `scripts/sync-claude-skills.ps1 -Check`) exits `0` |
+| 4 | The generated `.claude/` copy does not make the tree dirty | The copy under `.claude/skills/` and `.claude/agents/` is committed; after the check of row 3, `git status --porcelain` is still empty |
+| 5 | The subagents can be launched | Their `tools:` frontmatter lists Claude Code tool names (`Read, Bash`, ...); free-text entries make Claude Code refuse to spawn the agent with zero tools |
+| 6 | Permissions are pre-approved | Start the run with `--settings .claude/issue-to-pr.settings.json`: the union of the per-stage allow-lists plus a deny list. In `-p` mode anything not allowed is denied, never prompted |
 | 7 | GitHub access works non-interactively | `gh auth status` succeeds; the token can push branches and open PRs |
 | 8 | The target issue is open and structured | Goal, requirements and acceptance criteria sections; not a closed issue (closed issues trigger a confirmation prompt) |
 | 9 | The target branch name is free | `git branch --list feat/t3-<n>-*` is empty locally and on `origin` |
@@ -34,7 +34,8 @@ $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $dir = "docs/benchmark/transcripts/unattended-run-$stamp"
 New-Item -ItemType Directory -Path $dir | Out-Null
 Get-Date -Format "o" | Set-Content "$dir/started-at.txt"
-claude -p "/issue-to-pr #<n>" --output-format stream-json --verbose |
+claude --settings .claude/issue-to-pr.settings.json -p "/issue-to-pr #<n>" `
+    --output-format stream-json --verbose |
     Tee-Object -FilePath "$dir/transcript.jsonl"
 Get-Date -Format "o" | Set-Content "$dir/finished-at.txt"
 ```

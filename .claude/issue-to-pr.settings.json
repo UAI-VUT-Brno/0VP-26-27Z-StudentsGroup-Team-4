@@ -1,0 +1,49 @@
+{
+  "$comment": "Permission allow-list for an unattended /issue-to-pr run (docs/benchmark/unattended-run.md, pre-flight check 6). Pass it explicitly with: claude --settings .claude/issue-to-pr.settings.json -p \"/issue-to-pr #<n>\". It is the union of the per-stage allow-lists in skills/issue-to-pr/agents/*.md section 2; the per-stage limits inside it stay prompt-level. It is deliberately not .claude/settings.json, so interactive sessions of the team are not restricted by the deny list.",
+  "permissions": {
+    "allow": [
+      "Agent",
+      "Edit(src/**)",
+      "Edit(tests/**)",
+      "Edit(docs/**)",
+      "Edit(README.md)",
+      "Bash(gh issue view:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git status:*)",
+      "Bash(git branch --list:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git log:*)",
+      "Bash(git push --set-upstream origin:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet format:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push --delete:*)",
+      "Bash(git reset:*)",
+      "Bash(git rebase:*)",
+      "Bash(git stash:*)",
+      "Bash(git revert:*)",
+      "Bash(git switch:*)",
+      "Bash(git commit --amend:*)",
+      "Bash(git commit -a:*)",
+      "Bash(git add .)",
+      "Bash(git add -A:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh api:*)",
+      "Bash(gh issue close:*)",
+      "Bash(gh issue edit:*)",
+      "Bash(gh repo:*)",
+      "Edit(.github/**)",
+      "Edit(skills/**)",
+      "Edit(.claude/**)",
+      "Edit(.editorconfig)"
+    ]
+  }
+}
