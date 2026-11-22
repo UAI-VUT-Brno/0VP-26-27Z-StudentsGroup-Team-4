@@ -166,6 +166,27 @@ public sealed class RequestLoggingMiddlewareTests
         Assert.DoesNotContain("token=", harness.RawText);
     }
 
+    [Fact]
+    public async Task PathWithLineBreaks_DoesNotForgeLogLines()
+    {
+        // ASP.NET Core decodes %0D%0A in the URL path into real CR LF characters.
+        using var harness = new LogHarness();
+        var middleware = CreateMiddleware(harness, context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(CreateContext("GET", "/api/x\r\n[CRITICAL] forged"));
+
+        var entry = Assert.Single(harness.Flush());
+        var message = entry.Str("message")!;
+        Assert.DoesNotContain('\r', message);
+        Assert.DoesNotContain('\n', message);
+        Assert.Contains(@"HTTP GET /api/x\r\n[CRITICAL] forged -> 404", message);
+        Assert.Equal(@"/api/x\r\n[CRITICAL] forged", entry.Props().GetProperty("Path").GetString());
+    }
+
     private static RequestLoggingMiddleware CreateMiddleware(
         LogHarness harness,
         RequestDelegate next,
