@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using UAI.ZeroVP.DTO;
@@ -20,12 +21,24 @@ namespace UAI.ZeroVP.Tests
         private readonly HttpClient _client;
         private readonly ITestOutputHelper _output;
         private const int MaxResponseTimeMs = 500;
-        private const int ConcurrentUsers = 2500;
+
+        // Výchozí hodnota 2500 odpovídá původnímu zadání. Lze ji přepsat proměnnou
+        // prostředí PERFORMANCE_CONCURRENT_USERS, např. kdyby to na konkrétním
+        // runneru nestíhalo v limitu 500 ms i po paralelizaci přípravy dat.
+        private static readonly int ConcurrentUsers =
+            int.TryParse(Environment.GetEnvironmentVariable("PERFORMANCE_CONCURRENT_USERS"), out var concurrentUsersFromEnv)
+                ? concurrentUsersFromEnv
+                : 2500;
+
+        // Maximální počet souběžných příprav dat (PrepareIdAsync), aby se
+        // nezahltilo úložiště (zejména souborový repozitář) najednou.
+        private const int MaxConcurrentPreparations = 50;
 
         public FullApiPerformanceTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
         {
-            // Aplikace běží se stejným logováním jako v provozu (včetně console loggeru),
-            // aby měření odpovídalo realitě. Zápis do souboru ale přesměrujeme do Tempu.
+            // Zápis do souboru přesměrujeme do Tempu, aby testy nepsaly logy do repozitáře.
+            // (RedirectLogsToTemp mění jen cílovou složku souborového loggeru - nekonfiguruje
+            // žádný console logger; logování jako takové je stejné jako v Program.cs.)
             _client = factory.WithWebHostBuilder(builder =>
             {
                 builder.RedirectLogsToTemp();
@@ -39,8 +52,10 @@ namespace UAI.ZeroVP.Tests
         {
             new object[] { "GET",    "/api/info" },
             new object[] { "GET",    "/api/todos" },
+            new object[] { "GET",    "/api/todos/overdue" },
             new object[] { "GET",    "/api/todos/{id}" },
             new object[] { "POST",   "/api/todos" },
+            new object[] { "POST",   "/api/todos/repeat" },
             new object[] { "PUT",    "/api/todos/{id}" },
             new object[] { "POST",   "/api/todos/{id}/complete" },
             new object[] { "DELETE", "/api/todos/{id}" },
@@ -104,9 +119,10 @@ namespace UAI.ZeroVP.Tests
 
                 // Příprava dat MIMO měření: každý uživatel má svůj vlastní úkol
                 // (jinak by např. druhé DELETE na stejné id vrátilo 404).
-                var ids = new List<string?>();
-                for (int i = 0; i < ConcurrentUsers; i++)
-                    ids.Add(await PrepareIdAsync(uriTemplate));
+                // Paralelizováno přes SemaphoreSlim místo sekvenčního volání -
+                // s vyšším ConcurrentUsers by sekvenční příprava trvala déle
+                // než samotné měřené volání a zbytečně by prodlužovala test.
+                var ids = await PrepareIdsAsync(uriTemplate, ConcurrentUsers);
 
                 var tasks = new List<Task<long>>();
                 var overallStopwatch = Stopwatch.StartNew();
@@ -164,14 +180,47 @@ namespace UAI.ZeroVP.Tests
             return ReadId(await response.Content.ReadAsStringAsync());
         }
 
+        // Paralelně připraví 'count' úkolů (nebo vrátí 'count' nullů, pokud endpoint
+        // žádné id nepotřebuje) a omezí počet souběžných požadavků semaforem, aby
+        // se úložiště nezahltilo najednou.
+        private async Task<List<string?>> PrepareIdsAsync(string uriTemplate, int count)
+        {
+            using var semaphore = new SemaphoreSlim(MaxConcurrentPreparations);
+            var tasks = new Task<string?>[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                tasks[i] = PrepareOneAsync();
+            }
+
+            var ids = await Task.WhenAll(tasks);
+            return ids.ToList();
+
+            async Task<string?> PrepareOneAsync()
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    return await PrepareIdAsync(uriTemplate);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }
+        }
+
         private static HttpRequestMessage BuildRequest(string method, string uriTemplate, string? id)
         {
             var uri = id is null ? uriTemplate : uriTemplate.Replace("{id}", id);
             var request = new HttpRequestMessage(new HttpMethod(method), uri);
 
-            // Tělo potřebuje jen POST /api/todos (vytvoření) a PUT (úprava).
+            // Tělo potřebuje POST /api/todos (vytvoření), POST /api/todos/repeat
+            // (hromadné vytvoření) a PUT (úprava).
             if (method == "POST" && uriTemplate == "/api/todos")
                 request.Content = JsonContent.Create(CreateBody());
+            else if (method == "POST" && uriTemplate == "/api/todos/repeat")
+                request.Content = JsonContent.Create(CreateWeeklyBody());
             else if (method == "PUT")
                 request.Content = JsonContent.Create(UpdateBody());
 
@@ -183,6 +232,15 @@ namespace UAI.ZeroVP.Tests
             Title = "Perf test",
             Description = "Úkol vytvořený výkonnostním testem.",
             Priority = TodoPriority.Normal
+        };
+
+        private static CreateWeeklyTodoItemsRequest CreateWeeklyBody() => new()
+        {
+            Title = "Perf test (opakování)",
+            Description = "Úkoly vytvořené výkonnostním testem přes /api/todos/repeat.",
+            Priority = TodoPriority.Normal,
+            FirstDueAtUtc = DateTimeOffset.UtcNow.AddDays(1),
+            RepeatCount = 1
         };
 
         private static UpdateTodoItemRequest UpdateBody() => new()

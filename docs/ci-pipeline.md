@@ -1,11 +1,15 @@
 # CI pipeline a bezpečnostní skenování (DevSecOps)
 
-Repozitář používá GitHub Actions (`.github/workflows/ci.yml`). Pipeline se spouští při `push` do větví `main`, `feature/**`, `fix/**`, `perf/**` a při pull requestech do `main`. Skládá se ze dvou paralelních jobů:
+Repozitář používá GitHub Actions (`.github/workflows/ci.yml`). Pipeline se spouští při `push` do větví `main`, `feature/**`, `feat/**`, `fix/**`, `perf/**` a při pull requestech do `main`. Větev `perf/**` je jen další pojmenovací konvence (stejně jako `feature/**`/`fix/**`) pro práci na výkonnostních úpravách – spouští běžný `build-and-test` job, ne výkonnostní testy. Skládá se ze dvou paralelních jobů:
 
 | Job | Co dělá |
 |---|---|
-| `build-and-test` | Restore, kontrola formátování podle `.editorconfig` (`dotnet format --verify-no-changes`), build v konfiguraci Release a unit testy (bez kategorie `Performance`). |
+| `build-and-test` | Restore, kontrola formátování podle `.editorconfig` (`dotnet format --verify-no-changes`), build v konfiguraci Release a unit testy (bez kategorie `Performance`). Oba joby mají nastavena práva `contents: read` (least privilege). |
 | `security-scan` | Bezpečnostní brána: spouští `scripts/security-scan.ps1`. Při jakémkoli nálezu job selže. |
+
+## Výkonnostní testy
+
+Testy s `[Trait("Category", "Performance")]` (`FullApiPerformanceTests`) se nespouští automaticky při `push`/`pull_request` – jsou vyloučené filtrem `Category!=Performance` v `build-and-test`. Místo toho existuje samostatný workflow `.github/workflows/performance.yml`, spouštěný ručně přes **Actions → Performance → Run workflow** (`workflow_dispatch`), který spustí jen testy s `Category=Performance` a výsledky nahraje jako artefakt.
 
 ## Bezpečnostní kontroly
 
