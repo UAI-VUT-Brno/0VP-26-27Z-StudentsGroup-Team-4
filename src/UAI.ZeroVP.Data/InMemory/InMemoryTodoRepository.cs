@@ -14,7 +14,7 @@ namespace UAI.ZeroVP.Data.InMemory;
 /// <summary>
 /// Úložiště úkolů v operační paměti procesu s volitelnou persistencí do JSON souboru.
 /// </summary>
-public sealed class InMemoryTodoRepository : ITodoRepository
+public sealed class InMemoryTodoRepository : ITodoRepository, IDisposable
 {
     private readonly ConcurrentDictionary<Guid, TodoItem> _items = new();
     private readonly TimeProvider _timeProvider;
@@ -26,6 +26,10 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     // zazálohovat: pak je soubor na disku jedinou kopií dat a SaveAsync ho nesmí přepsat
     // (data by šla obnovit jen ručně z něj).
     private volatile bool _saveSuspended;
+
+    // Serializes SaveAsync: the early save on shutdown and the final one may overlap, and each save
+    // must write a complete snapshot taken after the previous save finished.
+    private readonly SemaphoreSlim _saveGate = new(1, 1);
 
     private static JsonSerializerOptions JsonOptions => TodoJson.Options;
 
@@ -293,8 +297,11 @@ public sealed class InMemoryTodoRepository : ITodoRepository
             return;
         }
 
+        await _saveGate.WaitAsync(cancellationToken);
+
         try
         {
+            // The snapshot is taken inside the gate, so a later save always writes newer data.
             var taskList = _items.Values
                 .OrderBy(i => i.CreatedAtUtc)
                 .ToList();
@@ -309,7 +316,14 @@ public sealed class InMemoryTodoRepository : ITodoRepository
             _logger.LogError(ex, "Failed to save tasks to persistent storage file '{FilePath}'.", path);
             throw;
         }
+        finally
+        {
+            _saveGate.Release();
+        }
     }
+
+    /// <summary>Releases the <see cref="SemaphoreSlim"/> that serializes <see cref="SaveAsync"/>.</summary>
+    public void Dispose() => _saveGate.Dispose();
 
     // Zkopíruje poškozený soubor vedle originálu (stejný tvar názvu jako sdílený režim:
     // <soubor>.corrupt-<UTC čas>). Vrátí cestu ke kopii, nebo null, když se kopie nepovedla.
