@@ -28,6 +28,11 @@ public class TodoPersistenceUnitTests
 
         public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken = default)
         {
+            if (ReadFailure is not null)
+            {
+                throw ReadFailure;
+            }
+
             if (Files.TryGetValue(path, out var content))
             {
                 return Task.FromResult(content);
@@ -46,6 +51,9 @@ public class TodoPersistenceUnitTests
 
         /// <summary>When set, <see cref="Copy"/> throws it (simulates a failed backup).</summary>
         public Exception? CopyFailure { get; set; }
+
+        /// <summary>When set, <see cref="ReadAllTextAsync"/> throws it (simulates a locked or unreadable file).</summary>
+        public Exception? ReadFailure { get; set; }
 
         public void Copy(string sourcePath, string destinationPath)
         {
@@ -341,6 +349,25 @@ public class TodoPersistenceUnitTests
 
         // The only copy of the data stays untouched until somebody recovers it by hand.
         Assert.Equal(CorruptedContent, storage.Files[path]);
+        Assert.Equal(0, storage.WriteCount);
+        Assert.Contains(logger.Logs, log => log.Level == LogLevel.Error && log.Message.Contains("not saved"));
+    }
+
+    [Fact]
+    public async Task LoadAsync_WhenTheFileCannotBeRead_SaveDoesNotOverwriteTheIntactFile()
+    {
+        const string path = "data/todos.json";
+        const string intactContent = "[{\"Id\":\"5b1c9f0e-2d7a-4c1e-9a52-7f3e8d6b4a10\",\"Title\":\"Kept on disk\",\"CreatedAtUtc\":\"2026-01-01T00:00:00Z\"}]";
+        var storage = new FakeFileStorage { ReadFailure = new IOException("The file is being used by another process.") };
+        storage.Files[path] = intactContent;
+        var logger = new TestLogger<InMemoryTodoRepository>();
+        var repository = CreateRepository(storage, path, logger, seed: true);
+
+        await repository.LoadAsync();
+        await repository.SaveAsync(); // what the hosted service does on shutdown
+
+        // The file on disk was never broken, only unreadable at startup: it must stay as it is.
+        Assert.Equal(intactContent, storage.Files[path]);
         Assert.Equal(0, storage.WriteCount);
         Assert.Contains(logger.Logs, log => log.Level == LogLevel.Error && log.Message.Contains("not saved"));
     }
