@@ -6,7 +6,7 @@ description: >
   and src/UAI.ZeroVP.API (plus tests under tests/), verifies it with build and
   dotnet format, and records it as conventional commits. Writes only under src/
   and tests/. Never creates branches, never pushes, never calls gh.
-tools: ["file read (src/, tests/, skills/issue-to-pr/rules/, .editorconfig)", "file write (src/, tests/)", "git add", "git commit", "git status", "dotnet build", "dotnet format (--include <own changed files> only)"]
+tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
 # C# Implementer Agent

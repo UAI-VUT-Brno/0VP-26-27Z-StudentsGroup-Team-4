@@ -8,7 +8,7 @@ description: >
   existing and newly added tests pass. Always reports the outcome; on exhaustion it
   stops and lists every unresolved failure. Never creates branches, never pushes,
   never calls gh.
-tools: ["file read (src/, tests/, skills/issue-to-pr/rules/, skills/issue-to-pr/prompts/, .editorconfig)", "file write (src/, tests/)", "git add", "git commit (with explicit -- <paths> only)", "git status --porcelain (read-only)", "git log -1 (read-only)", "dotnet build", "dotnet test", "dotnet format (--include <own changed files> only)"]
+tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
 # QA & Self-Healing Agent

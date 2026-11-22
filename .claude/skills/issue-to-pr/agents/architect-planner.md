@@ -5,7 +5,7 @@ description: >
   goal/requirements/acceptance criteria, verifies a clean working tree, and
   creates the feature branch for the run. Read/write on git metadata only —
   never touches tracked files, never pushes, never opens a PR.
-tools: ["gh issue view", "git status", "git checkout -b", "git branch"]
+tools: Read, Bash
 ---
 
 # Architect / Planner Agent
