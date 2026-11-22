@@ -70,6 +70,35 @@ public class TodosControllerUserTests
         Assert.Empty(list);
     }
 
+    [Theory]
+    [InlineData(" anna")]
+    [InlineData("anna ")]
+    [InlineData("  anna  ")]
+    public async Task GetAll_PaddedUserId_IsTrimmedAndReturnsThatUsersTasks(string paddedUserId)
+    {
+        await AddItemAsync("Anna", "anna");
+        await AddItemAsync("Petr", "petr");
+
+        var result = await CreateController().GetAll(null, paddedUserId, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TodoItemDto>>(ok.Value);
+        var dto = Assert.Single(list);
+        Assert.Equal("anna", dto.UserId);
+    }
+
+    [Fact]
+    public async Task GetAll_WhitespaceOnlyUserId_ReturnsNoTasks()
+    {
+        await AddItemAsync("Anna", "anna");
+
+        var result = await CreateController().GetAll(null, "   ", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TodoItemDto>>(ok.Value);
+        Assert.Empty(list);
+    }
+
     [Fact]
     public async Task Create_WithUserId_ReturnsTaskWithUserId()
     {
@@ -78,6 +107,7 @@ public class TodosControllerUserTests
         var result = await CreateController().Create(request, CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtRouteResult>(result.Result);
+        Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
         var dto = Assert.IsType<TodoItemDto>(created.Value);
         Assert.Equal("anna", dto.UserId);
     }

@@ -225,6 +225,23 @@ public sealed class McpServerIntegrationTests : IClassFixture<McpServerFixture>
         Assert.All(items, item => Assert.Equal(userId, item.GetProperty("userId").GetString(), ignoreCase: true));
     }
 
+    [Theory(Timeout = TestTimeoutMilliseconds)]
+    [InlineData(" anna")]
+    [InlineData("anna ")]
+    [InlineData("  anna  ")]
+    public async Task ListTodos_FilteredByPaddedUserId_IsTrimmedAndReturnsThatUsersTasks(string paddedUserId)
+    {
+        await using var client = await ConnectAsync();
+        var expected = _fixture.Tasks.Where(task => task.UserId == "anna").Select(task => task.Id).Order().ToList();
+
+        using var document = await ListTodosAsync(client, userId: paddedUserId);
+        var items = document.RootElement.EnumerateArray().ToList();
+
+        Assert.NotEmpty(expected);
+        Assert.Equal(expected, items.Select(item => item.GetProperty("id").GetGuid()).Order());
+        Assert.All(items, item => Assert.Equal("anna", item.GetProperty("userId").GetString()));
+    }
+
     [Fact(Timeout = TestTimeoutMilliseconds)]
     public async Task ListTodos_FilteredByUserAndCompletion_CombinesBothFilters()
     {

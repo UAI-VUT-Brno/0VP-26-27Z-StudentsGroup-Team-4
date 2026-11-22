@@ -55,6 +55,39 @@ public sealed class TodosOverdueApiTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task GetOverdue_PaddedUserId_IsTrimmedAndReturnsThatUsersTasks()
+    {
+        var userId = $"overdue-{Guid.NewGuid():N}";
+        var asOfUtc = new DateTimeOffset(2026, 1, 16, 12, 0, 0, TimeSpan.Zero);
+        var overdue = await AddTaskAsync("Overdue", userId, asOfUtc.AddSeconds(-1));
+        await AddTaskAsync("Another user", $"other-{Guid.NewGuid():N}", asOfUtc.AddSeconds(-1));
+
+        var query = $"?asOfUtc={Uri.EscapeDataString(asOfUtc.ToString("O", CultureInfo.InvariantCulture))}&userId=%20{userId}%20";
+        using var response = await _client.GetAsync($"{Url}{query}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = (await response.Content.ReadFromJsonAsync<List<TodoItemDto>>(JsonOptions))!;
+        var item = Assert.Single(result);
+        Assert.Equal(overdue.Id, item.Id);
+        Assert.Equal(userId, item.UserId);
+    }
+
+    [Fact]
+    public async Task GetOverdue_WhitespaceOnlyUserId_Returns200WithEmptyList()
+    {
+        var userId = $"overdue-{Guid.NewGuid():N}";
+        var asOfUtc = new DateTimeOffset(2026, 1, 16, 12, 0, 0, TimeSpan.Zero);
+        await AddTaskAsync("Overdue", userId, asOfUtc.AddSeconds(-1));
+
+        var query = $"?asOfUtc={Uri.EscapeDataString(asOfUtc.ToString("O", CultureInfo.InvariantCulture))}&userId=%20%20";
+        using var response = await _client.GetAsync($"{Url}{query}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = (await response.Content.ReadFromJsonAsync<List<TodoItemDto>>(JsonOptions))!;
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public async Task GetOverdue_InvalidAsOfUtc_ReturnsProblemDetails()
     {
         using var response = await _client.GetAsync($"{Url}?asOfUtc=not-a-date");

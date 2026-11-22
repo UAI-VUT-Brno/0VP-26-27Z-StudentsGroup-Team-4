@@ -45,11 +45,7 @@ public sealed class TodosController : ControllerBase
         [FromQuery] string? userId,
         CancellationToken cancellationToken)
     {
-        // ASP.NET Core binds an empty "?userId=" to null, which would silently mean "no filter"
-        // and return the tasks of every user. An explicitly present but empty userId matches nothing.
-        var userIdFilter = userId is null && Request?.Query.ContainsKey("userId") == true
-            ? string.Empty
-            : userId;
+        var userIdFilter = NormalizeUserIdFilter(userId, Request);
 
         var items = await _repository.GetAllAsync(isCompleted, userIdFilter, cancellationToken);
 
@@ -78,9 +74,7 @@ public sealed class TodosController : ControllerBase
         [FromQuery] string? userId,
         CancellationToken cancellationToken)
     {
-        var userIdFilter = userId is null && Request?.Query.ContainsKey("userId") == true
-            ? string.Empty
-            : userId;
+        var userIdFilter = NormalizeUserIdFilter(userId, Request);
 
         var asOfUtcProvided = Request?.Query.ContainsKey("asOfUtc") == true;
 
@@ -257,6 +251,29 @@ public sealed class TodosController : ControllerBase
         _logger.LogInformation(LogEvents.TodoDeleted, "Smazán úkol {TodoId}.", id);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Normalizes the <c>?userId=</c> query filter for <see cref="GetAll"/> and <see cref="GetOverdue"/>.
+    /// <list type="bullet">
+    /// <item><description>Omitted entirely (no <c>userId</c> key in the query string) -&gt; <c>null</c>: no filter, tasks of every user.</description></item>
+    /// <item><description>
+    /// Present (<c>?userId=</c>, <c>?userId=%20</c>, ...) -&gt; the value, trimmed. ASP.NET Core binds an
+    /// empty <c>?userId=</c> to <c>null</c>, which would otherwise silently mean "no filter" and return
+    /// the tasks of every user, so an explicitly present but empty/whitespace-only value is turned into
+    /// <see cref="string.Empty"/> instead, which matches nothing (stored user IDs are never empty).
+    /// </description></item>
+    /// <item><description>A non-empty value is trimmed, so <c>?userId=%20anna%20</c> matches <c>anna</c>.</description></item>
+    /// </list>
+    /// </summary>
+    private static string? NormalizeUserIdFilter(string? userId, HttpRequest? request)
+    {
+        if (userId is null)
+        {
+            return request?.Query.ContainsKey("userId") == true ? string.Empty : null;
+        }
+
+        return userId.Trim();
     }
 
     /// <summary>Formats a UTC instant for the log in a culture-independent ISO 8601 form.</summary>
