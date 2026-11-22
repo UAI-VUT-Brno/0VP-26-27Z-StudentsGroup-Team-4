@@ -38,7 +38,7 @@ public sealed class DockerComposeMcpBehaviorTests : IAsyncLifetime
                 && !pair.Key.StartsWith("FileLogging__", StringComparison.Ordinal))
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
 
-    private async Task<(HttpStatusCode Mcp, HttpStatusCode Rest)> RequestAsync(string instanceId, Dictionary<string, string> environment)
+    private async Task<(HttpStatusCode McpStatus, HttpStatusCode ApiStatus)> RequestAsync(string instanceId, Dictionary<string, string> environment)
     {
         var server = await ApiProcess.StartAsync(
             instanceId,
