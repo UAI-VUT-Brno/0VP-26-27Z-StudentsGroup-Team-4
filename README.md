@@ -251,8 +251,11 @@ The API can expose the ToDo queries to MCP clients (MCP Inspector, GitHub Copilo
 with two read-only tools, `list_todos` and `get_todo`. They use the existing `ITodoRepository`; the REST API is unchanged.
 
 **The endpoint has no authentication and is not safe to expose publicly.** It is served only when
-`Mcp:Enabled` is `true`: `appsettings.Development.json` turns it on, `appsettings.json` (Production, Docker)
-keeps it off. Tools, manual testing with MCP Inspector and client configuration: [docs/mcp.md](docs/mcp.md).
+`Mcp:Enabled` is `true`: `appsettings.Development.json` turns it on and `appsettings.json` keeps it
+off by default. `docker-compose.yml` runs the `api` service with `ASPNETCORE_ENVIRONMENT=Development`,
+so it sets `Mcp__Enabled=false` explicitly for that service - without it, every replica behind nginx
+would expose `/mcp` on the published gateway port. Tools, manual testing with MCP Inspector and client
+configuration: [docs/mcp.md](docs/mcp.md).
 
 ## Swagger
 
@@ -473,6 +476,7 @@ Nastavení se předává výhradně proměnnými prostředí v `docker-compose.y
 | `JsonPersistence__Enabled`, `JsonPersistence__Shared`, `JsonPersistence__FilePath` | sdílené úložiště: jeden soubor na svazku, u všech replik stejná cesta |
 | `FileLogging__Directory`, `FileLogging__IncludeInstanceId` | složka souborových logů a ID repliky v názvu souboru |
 | `Instance__Id` | volitelně pevné ID instance; bez něj je to `{hostname kontejneru}-{port}` |
+| `Mcp__Enabled` | zapnutí nezabezpečeného `/mcp` endpointu; `docker-compose.yml` ho nastavuje na `false` natvrdo, protože `ASPNETCORE_ENVIRONMENT=Development` by jinak zapnul `Mcp:Enabled` z `appsettings.Development.json` – **tento řádek neodstraňujte**, viz [docs/mcp.md](docs/mcp.md#turning-it-on-and-off) |
 
 Aplikace v kontejneru běží pod uživatelem bez práv roota a naslouchá na portu `8080`. Kontrola zdraví volá `/health`
 z malého pomocného nástroje v image (runtime image nemá `curl`).
