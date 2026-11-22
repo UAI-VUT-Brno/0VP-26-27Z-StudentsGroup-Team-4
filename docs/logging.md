@@ -27,9 +27,13 @@ Kde je kód: `src/UAI.ZeroVP.API/Logging/`. Do `Program.cs` se zapojuje třemi �
 | `dotnet run --project src/UAI.ZeroVP.API` | `src/UAI.ZeroVP.API/logs/` |
 | Docker kontejner | `/app/logs/` (uvnitř kontejneru) |
 
-> **Docker a persistence.** Soubor v kontejneru zmizí spolu s kontejnerem – stejně jako data
-> v paměti (viz README, sekce Úložiště dat). Aby log restart přežil, připojte svazek a nasměrujte
-> do něj log:
+> **Docker a persistence.** Soubor s logem je svázán s životním cyklem kontejneru – zmizí spolu
+> s ním, pokud kontejner smažete (`docker rm`, `docker compose down` bez připojeného svazku, …).
+> To už ale neplatí pro samotná data úkolů: od zavedení JSON perzistence (`JsonPersistence`, viz
+> README, sekce Úložiště dat) se úkoly ukládají do souboru a při startu se znovu načtou, takže na
+> rozdíl od logu přežijí restart kontejneru i celé aplikace – pokud je i soubor s daty na trvalém
+> svazku (`docker compose down -v` svazek a s ním i data smaže). Aby log restart přežil stejně jako
+> data, připojte svazek a nasměrujte do něj log:
 >
 > ```bash
 > docker run -v zerovp-logs:/var/log/zerovp -e FileLogging__Directory=/var/log/zerovp ...
