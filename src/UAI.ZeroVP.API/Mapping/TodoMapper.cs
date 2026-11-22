@@ -13,6 +13,7 @@ public static class TodoMapper
     public static TodoItemDto ToDto(this TodoItem entity) => new()
     {
         Id = entity.Id,
+        UserId = entity.UserId,
         Title = entity.Title,
         Description = entity.Description,
         Priority = entity.Priority,
@@ -27,6 +28,7 @@ public static class TodoMapper
     public static TodoItem ToEntity(this CreateTodoItemRequest request, DateTimeOffset nowUtc) => new()
     {
         Id = Guid.NewGuid(),
+        UserId = request.UserId,
         Title = request.Title.Trim(),
         Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
         Priority = request.Priority,

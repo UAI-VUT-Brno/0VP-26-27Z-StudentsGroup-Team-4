@@ -20,6 +20,10 @@ public sealed record CreateTodoItemRequest
     [StringLength(200, MinimumLength = 1, ErrorMessage = "Název musí mít 1 až 200 znaků.")]
     public string Title { get; init; } = string.Empty;
 
+    /// <summary>Řetězcový identifikátor uživatele, kterému úkol patří.</summary>
+    [Required(AllowEmptyStrings = false, ErrorMessage = "Identifikátor uživatele je povinný.")]
+    public string UserId { get; init; } = string.Empty;
+
     /// <summary>Volitelný popis, maximálně 1000 znaků.</summary>
     [StringLength(1000, ErrorMessage = "Popis smí mít nejvýše 1000 znaků.")]
     public string? Description { get; init; }

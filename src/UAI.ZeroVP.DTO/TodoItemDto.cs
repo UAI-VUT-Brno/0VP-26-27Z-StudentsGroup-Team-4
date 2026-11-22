@@ -10,6 +10,9 @@ public sealed record TodoItemDto
     /// <summary>Jednoznačný identifikátor úkolu.</summary>
     public required Guid Id { get; init; }
 
+    /// <summary>Řetězcový identifikátor uživatele, kterému úkol patří.</summary>
+    public required string UserId { get; init; }
+
     /// <summary>Krátký název úkolu.</summary>
     public required string Title { get; init; }
 

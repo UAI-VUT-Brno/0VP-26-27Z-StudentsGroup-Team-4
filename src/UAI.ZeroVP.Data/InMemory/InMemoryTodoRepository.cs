@@ -130,6 +130,7 @@ public sealed class InMemoryTodoRepository : ITodoRepository
         var item = new TodoItem
         {
             Id = Guid.NewGuid(),
+            UserId = "sample",
             Title = title,
             Description = description,
             Priority = priority,

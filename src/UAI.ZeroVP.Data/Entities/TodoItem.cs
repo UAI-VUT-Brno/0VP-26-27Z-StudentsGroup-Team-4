@@ -12,6 +12,9 @@ public sealed class TodoItem
     /// <summary>Jednoznačný identifikátor úkolu.</summary>
     public required Guid Id { get; init; }
 
+    /// <summary>Identifikátor uživatele, kterému úkol patří.</summary>
+    public required string UserId { get; init; }
+
     /// <summary>Krátký název úkolu.</summary>
     public required string Title { get; set; }
 
@@ -41,6 +44,7 @@ public sealed class TodoItem
     public TodoItem Clone() => new()
     {
         Id = Id,
+        UserId = UserId,
         Title = Title,
         Description = Description,
         Priority = Priority,
