@@ -134,6 +134,29 @@ public class TodosUserFilterApiTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
+    public async Task GetAll_WhitespaceOnlyUserId_Returns200WithEmptyList()
+    {
+        await CreateTaskAsync("Someone's task", NewUserId("anna"));
+
+        var result = await GetTasksAsync("?userId=%20%20");
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetAll_PaddedUserId_IsTrimmedAndReturnsThatUsersTasks()
+    {
+        var anna = NewUserId("anna");
+        var task = await CreateTaskAsync("Anna", anna);
+
+        var result = await GetTasksAsync($"?userId=%20{anna}%20");
+
+        var item = Assert.Single(result);
+        Assert.Equal(task.Id, item.Id);
+        Assert.Equal(anna, item.UserId);
+    }
+
+    [Fact]
     public async Task GetAll_UserIdAndIsCompletedFalse_ReturnsOnlyOpenTasksOfThatUser()
     {
         var anna = NewUserId("anna");
