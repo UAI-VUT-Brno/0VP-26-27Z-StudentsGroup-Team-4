@@ -64,7 +64,8 @@ jobs:
       - name: Verify .claude/ copy is in sync with skills/
         shell: bash
         run: bash scripts/sync-claude-skills.sh --check
-    security-scan:
+
+  security-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
