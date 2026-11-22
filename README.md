@@ -73,6 +73,9 @@ API naslouchá na `http://localhost:5258`. Kořen `/` přesměruje na Swagger UI
 
 Chybové odpovědi mají jednotný tvar `ProblemDetails` (RFC 9457).
 Připravené požadavky k odzkoušení jsou v souboru `src/UAI.ZeroVP.API/UAI.ZeroVP.API.http`.
+Při vytváření úkolu je povinné zadat řetězcový identifikátor uživatele (`userId`);
+API ho vrací spolu s úkolem. Identifikátor zatím není ověřován a aktualizace úkolu
+ho nemění.
 
 ## Logování
 
@@ -134,7 +137,7 @@ Mimo prostředí Development je Swagger ve výchozím stavu vypnutý (viz výše
 curl http://localhost:5258/api/todos
 curl -X POST http://localhost:5258/api/todos \
   -H "Content-Type: application/json" \
-  -d '{"title":"Napsat Dockerfile","priority":"High"}'
+  -d '{"title":"Napsat Dockerfile","userId":"user-1","priority":"High"}'
 curl http://localhost:5258/api/info
 ```
 

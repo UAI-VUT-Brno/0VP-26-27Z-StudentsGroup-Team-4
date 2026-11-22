@@ -25,6 +25,7 @@ Content-Type: application/json
 
 {
   "title": "Vyzkoušet docker build",
+  "userId": "user-1",
   "description": "Postavit image z vícefázového Dockerfile.",
   "priority": "High"
 }
@@ -35,6 +36,7 @@ Content-Type: application/json
 
 {
   "title": "",
+  "userId": "user-1",
   "priority": "High"
 }
 
