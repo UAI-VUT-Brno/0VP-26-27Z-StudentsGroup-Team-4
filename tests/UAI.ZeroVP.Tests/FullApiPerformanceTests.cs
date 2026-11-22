@@ -22,12 +22,13 @@ namespace UAI.ZeroVP.Tests
         private readonly ITestOutputHelper _output;
         private const int MaxResponseTimeMs = 500;
 
-        // 2500 souběžných požadavků bylo zbytečně mnoho pro limit 500 ms na odpověď
-        // (ověřeno ručním testováním hranic) a na slabších strojích CI zbytečně
-        // prodlužovalo běh. 500 je dostatečné zátěžové číslo pro tento test;
-        // samotný ruční/naplánovaný `workflow_dispatch` běh (performance.yml) může
-        // číslo dál zvýšit, pokud to bude potřeba.
-        private const int ConcurrentUsers = 500;
+        // Výchozí hodnota 2500 odpovídá původnímu zadání. Lze ji přepsat proměnnou
+        // prostředí PERFORMANCE_CONCURRENT_USERS, např. kdyby to na konkrétním
+        // runneru nestíhalo v limitu 500 ms i po paralelizaci přípravy dat.
+        private static readonly int ConcurrentUsers =
+            int.TryParse(Environment.GetEnvironmentVariable("PERFORMANCE_CONCURRENT_USERS"), out var concurrentUsersFromEnv)
+                ? concurrentUsersFromEnv
+                : 2500;
 
         // Maximální počet souběžných příprav dat (PrepareIdAsync), aby se
         // nezahltilo úložiště (zejména souborový repozitář) najednou.
