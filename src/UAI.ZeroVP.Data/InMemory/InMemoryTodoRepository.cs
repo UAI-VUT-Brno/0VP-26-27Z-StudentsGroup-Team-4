@@ -22,8 +22,9 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     private readonly JsonPersistenceOptions _persistenceOptions;
     private readonly ILogger<InMemoryTodoRepository> _logger;
 
-    // Nastaví se, když je soubor poškozený a nepodařilo se ho zazálohovat: pak je původní soubor
-    // jedinou kopií dat a SaveAsync ho nesmí přepsat (data by šla obnovit jen ručně z něj).
+    // Nastaví se, když soubor při startu nešel přečíst, nebo je poškozený a nepodařilo se ho
+    // zazálohovat: pak je soubor na disku jedinou kopií dat a SaveAsync ho nesmí přepsat
+    // (data by šla obnovit jen ručně z něj).
     private volatile bool _saveSuspended;
 
     private static JsonSerializerOptions JsonOptions => TodoJson.Options;
@@ -262,7 +263,14 @@ public sealed class InMemoryTodoRepository : ITodoRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error occurred while loading persistent storage file '{FilePath}'. Starting empty.", path);
+            // Soubor nejde přečíst (zamčený jiným procesem nebo antivirem, odepřený přístup),
+            // ale na disku je nejspíš v pořádku. Uložení při ukončení by ho přepsalo prázdným
+            // stavem, proto se ukládání zablokuje stejně jako u poškozeného souboru bez zálohy.
+            _saveSuspended = true;
+            _logger.LogError(
+                ex,
+                "Unexpected error occurred while loading persistent storage file '{FilePath}'. Starting empty; changes will not be saved, so the file stays untouched.",
+                path);
             _items.Clear();
         }
     }
@@ -280,7 +288,7 @@ public sealed class InMemoryTodoRepository : ITodoRepository
         if (_saveSuspended)
         {
             _logger.LogError(
-                "Tasks were not saved: persistent storage file '{FilePath}' was corrupted at startup and could not be backed up, so it is kept unchanged for manual recovery.",
+                "Tasks were not saved: persistent storage file '{FilePath}' could not be loaded safely at startup (unreadable, or corrupted without a backup), so it is kept unchanged for manual recovery.",
                 path);
             return;
         }
