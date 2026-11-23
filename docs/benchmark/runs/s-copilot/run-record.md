@@ -67,7 +67,7 @@ final state: build exit code 0, test exit code 0, 338 tests total, 338 passed,
 
 ## M5 - C# Code Quality and Style
 
-M5a (from `metrics.json`, collected on commit `14bc71b`):
+M5a (from `metrics.json`, collected on commit `9641d29`):
 
 | Field | Value |
 |-------|-------|
