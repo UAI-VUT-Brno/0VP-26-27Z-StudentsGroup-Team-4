@@ -258,7 +258,7 @@ Success:
   "attempts": [
     {
       "attempt": 1,
-      "failure": { "kind": "compile", "id": "CS0535", "file": "src/UAI.ZeroVP.Data/Persistence/Sharedjsonfiletodorepository.cs", "line": 61 },
+      "failure": { "kind": "compile", "id": "CS0535", "file": "src/UAI.ZeroVP.Data/Persistence/SharedJsonFileTodoRepository.cs", "line": 61 },
       "action": "implemented UpdateAsync(TodoItem, int, CancellationToken) in the shared JSON repository",
       "commit": { "sha": "a1b2c3d", "message": "fix: implement versioned update in shared json repository (#21)" },
       "result": "compile error resolved; 2 tests failing"
@@ -349,11 +349,11 @@ Issue #21 after Stage 2. Baseline run fails to build.
 
 1. `git status` -> on `feat/t3-21-add-todo-version-concurrency`, `src/` and `tests/` clean.
 2. Baseline: build error
-   `.../Persistence/Sharedjsonfiletodorepository.cs(61,18): error CS0535: ... 'ITodoRepository.UpdateAsync(TodoItem, int, CancellationToken)'`.
+   `.../Persistence/SharedJsonFileTodoRepository.cs(61,18): error CS0535: ... 'ITodoRepository.UpdateAsync(TodoItem, int, CancellationToken)'`.
    Out of scope? No (`CS`, under `src/`). Cascade root: the interface changed, one implementation lags.
 3. Attempt 1: implement the member (version check inside the file lock, as in the in-memory
    repository). `dotnet format --include` + `--verify-no-changes` pass.
-   `git add src/UAI.ZeroVP.Data/Persistence/Sharedjsonfiletodorepository.cs` ->
+   `git add src/UAI.ZeroVP.Data/Persistence/SharedJsonFileTodoRepository.cs` ->
    `git commit -m "fix: implement versioned update in shared json repository (#21)"`.
    Re-run: builds; one test fails.
 4. TRX: `TodoMapperTests.ToDto_MapsVersion`, `Assert.Equal() Failure: Expected 2, Actual 1`;

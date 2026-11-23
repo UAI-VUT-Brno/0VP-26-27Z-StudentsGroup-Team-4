@@ -41,18 +41,7 @@ builder.Services.AddInMemoryTodoData(
     configureTodo: options =>
         builder.Configuration.GetSection(InMemoryTodoOptions.SectionName).Bind(options),
     configurePersistence: options =>
-    {
-        builder.Configuration.GetSection(JsonPersistenceOptions.SectionName).Bind(options);
-
-        // Při spuštění pod test runnerem (WebApplicationFactory) persistenci na disk vypneme,
-        // aby integrační testy API zůstaly plně izolované a nezanechávaly znečištěný soubor na disku.
-        // Test, který sdílené úložiště výslovně zapne (JsonPersistence:Shared=true) a dá mu vlastní soubor
-        // v dočasné složce, tím opt-inuje – jinak by nešlo ověřit sdílení dat mezi instancemi.
-        if (!options.Shared && AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith("testhost", StringComparison.OrdinalIgnoreCase) == true))
-        {
-            options.Enabled = false;
-        }
-    });
+        builder.Configuration.GetSection(JsonPersistenceOptions.SectionName).Bind(options));
 
 builder.Services.AddHostedService<TodoPersistenceHostedService>();
 

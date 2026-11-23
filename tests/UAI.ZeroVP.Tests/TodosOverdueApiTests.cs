@@ -29,7 +29,7 @@ public sealed class TodosOverdueApiTests : IClassFixture<WebApplicationFactory<P
 
     public TodosOverdueApiTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
+        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath).DisableJsonPersistence());
         _client = _factory.CreateClient();
         _repository = _factory.Services.GetRequiredService<ITodoRepository>();
     }

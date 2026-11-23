@@ -30,7 +30,7 @@ public class WeeklyTodosApiTests : IClassFixture<WebApplicationFactory<Program>>
     public WeeklyTodosApiTests(WebApplicationFactory<Program> factory)
     {
         // Logs of this test's in-memory server go to its own temp folder, deleted after the test.
-        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
+        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath).DisableJsonPersistence());
         _client = _factory.CreateClient();
     }
 

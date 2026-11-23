@@ -29,6 +29,7 @@ public sealed class TitleLogInjectionTests : IDisposable
     {
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            builder.DisableJsonPersistence();
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {

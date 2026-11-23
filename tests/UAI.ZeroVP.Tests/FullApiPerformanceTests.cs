@@ -41,7 +41,7 @@ namespace UAI.ZeroVP.Tests
             // Zápis do souboru přesměrujeme do vlastní dočasné složky, aby testy nepsaly logy
             // do repozitáře; po testu se smaže. (RedirectLogsTo mění jen cílovou složku
             // souborového loggeru – logování jako takové je stejné jako v Program.cs.)
-            _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
+            _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath).DisableJsonPersistence());
             _client = _factory.CreateClient();
 
             _output = output;

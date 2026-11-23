@@ -13,7 +13,7 @@ public sealed class FileLoggingEnabledOverrideTests
     private static async Task<int> CountLogFilesAfterOneRequestAsync(string logDirectory, string enabled)
     {
         using (var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, configuration) =>
+            builder.DisableJsonPersistence().ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["FileLogging:Enabled"] = enabled,

@@ -36,7 +36,7 @@ public sealed class InstanceInfoApiTests
         }
 
         return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings)));
+            builder.DisableJsonPersistence().ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings)));
     }
 
     private static async Task<JsonElement> GetInfoAsync(WebApplicationFactory<Program> instance)

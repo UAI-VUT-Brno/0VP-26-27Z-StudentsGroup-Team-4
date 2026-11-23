@@ -76,7 +76,7 @@ Example:
 
 -> `id = CS0535`, `file = src/UAI.ZeroVP.Data/InMemory/InMemoryTodoRepository.cs`, `line = 58`.
 The interface changed; the implementation (this file) is the one to fix. Also check
-the other implementation, `Persistence/Sharedjsonfiletodorepository.cs`, for the same error.
+the other implementation, `Persistence/SharedJsonFileTodoRepository.cs`, for the same error.
 
 ## 3. Test failures: use the TRX file, not the console
 

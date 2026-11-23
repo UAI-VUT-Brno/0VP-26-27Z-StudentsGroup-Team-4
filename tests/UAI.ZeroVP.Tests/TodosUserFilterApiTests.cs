@@ -29,7 +29,7 @@ public class TodosUserFilterApiTests : IClassFixture<WebApplicationFactory<Progr
     public TodosUserFilterApiTests(WebApplicationFactory<Program> factory)
     {
         // Logy tohoto testu jdou do vlastní dočasné složky, která se po testu smaže.
-        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath));
+        _factory = factory.WithWebHostBuilder(builder => builder.RedirectLogsTo(_logs.FullPath).DisableJsonPersistence());
         _client = _factory.CreateClient();
     }
 
