@@ -5,7 +5,7 @@ description: >
   goal/requirements/acceptance criteria, verifies a clean working tree, and
   creates the feature branch for the run. Read/write on git metadata only —
   never touches tracked files, never pushes, never opens a PR.
-tools: ["gh issue view", "git status", "git checkout -b", "git branch"]
+tools: Read, Bash
 ---
 
 # Architect / Planner Agent
@@ -108,7 +108,7 @@ this alone; let Stage 2 decide whether it has enough to work with.
 ### Step 3 — Verify a clean working tree
 
 ```bash
-git status --porcelain
+git status --porcelain -- . ':(exclude).claude'
 ```
 
 - Any non-empty output (staged, unstaged, or untracked changes) means the
@@ -117,6 +117,10 @@ git status --porcelain
   `--porcelain` output verbatim in the report so the user can see exactly
   what's uncommitted.
 - Empty output → proceed to Step 4.
+
+The generated `.claude/` copy (see SKILL.md §8) is excluded from this
+check, consistent with the C# Implementer, which ignores changes outside
+`src/` and `tests/`. Do not touch or stage it.
 
 ### Step 4 — Derive the branch name
 
@@ -195,7 +199,7 @@ without re-running anything.
 |----------------------------------|---------|
 | `ERR_TOOL_OUT_OF_SCOPE`            | A step would require a tool outside §2's allow-list. |
 | `ERR_ISSUE_FETCH_FAILED`            | `gh issue view` failed or returned no data. |
-| `ERR_DIRTY_WORKING_TREE`             | `git status --porcelain` returned non-empty output. |
+| `ERR_DIRTY_WORKING_TREE`             | `git status --porcelain -- . ':(exclude).claude'` returned non-empty output. |
 | `ERR_BRANCH_ALREADY_EXISTS`           | The derived branch name already exists locally. |
 | `ERR_BRANCH_CREATE_FAILED`             | `git checkout -b` failed unexpectedly after a clean, non-conflicting state. |
 

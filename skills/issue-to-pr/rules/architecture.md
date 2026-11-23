@@ -27,8 +27,9 @@ them (see §1).
 
 - Read both files before the first edit. If they disagree with this file, they win.
 - Never copy their rules into new files; refer to them by name.
-- The conformance gate is `dotnet format --verify-no-changes` over the files the run
-  touched (§8). Code is **not complete** until that command exits with code 0.
+- The conformance gate is `dotnet format UAI.ZeroVP.sln --verify-no-changes` over the
+  whole solution, the same command as CI (§8). Code is **not complete** until that
+  command exits with code 0.
 
 ## 2. Solution layout and dependency direction
 
@@ -124,6 +125,10 @@ Whenever an issue asks for protection against lost updates, use this pattern.
    no `Version` (data written before this feature) is read as version `1`.
 6. **Conflict is never silent.** A mismatch returns `VersionConflict`; the API
    turns it into `409 Conflict` (§5.4). The "last write wins" fallback is forbidden.
+   This applies to **every** caller of the update method, not only `PUT`: an action
+   without a request body, such as `POST /api/todos/{id}/complete`, passes the
+   `Version` of the item it has just read. A change made by someone else between
+   that read and the write therefore also ends as `409`.
 7. **Contracts.** `TodoItemDto` exposes `Version`; the update request carries the
    expected version (`[Range(1, int.MaxValue, ErrorMessage = "...")]`). It is
    required for protected endpoints - a missing version is a `400`, not a skipped
@@ -235,15 +240,20 @@ in this order; all must succeed:
 ```bash
 dotnet format UAI.ZeroVP.sln --include <files>
 dotnet build UAI.ZeroVP.sln --configuration Release
-dotnet format UAI.ZeroVP.sln --verify-no-changes --include <files>
+dotnet format UAI.ZeroVP.sln --verify-no-changes --no-restore
 ```
 
 - The first command normalises (BOM, CRLF, indentation, final newline) **only** the
-  files of this run. `dotnet format` without `--include` is forbidden: it would
-  rewrite files outside the plan.
-- The gate judges **your** files, not the rest of the repository. A violation in an
-  untouched file is not yours to fix and does not fail the run; report it under
-  `warnings`.
+  files of this run. `dotnet format` in fix mode without `--include` is forbidden:
+  it would rewrite files outside the plan.
+- The third command is the gate. It checks the **whole solution** with exactly the
+  command CI runs (`.github/workflows/ci.yml`, step "Verify formatting"), so a run
+  that passes here does not fail the formatting step in CI.
+- The baseline on `main` is clean (#60). Before the first edit the implementer runs
+  `dotnet format UAI.ZeroVP.sln --verify-no-changes` once, and if that already fails
+  it stops with `ERR_BASELINE_NOT_CLEAN` without fixing anything. A violation the
+  gate reports after the edits therefore belongs to this run, and it is fixed only
+  through the files of this run.
 - Analyse failures by diagnostic id (`WHITESPACE`, `FINALNEWLINE`, `CHARSET`,
   `ENDOFLINE`) and file path, never by message text (it is localised).
 - A failing build or format check blocks the commit. Nothing is committed until

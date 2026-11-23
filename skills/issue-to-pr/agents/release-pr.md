@@ -7,7 +7,7 @@ description: >
   opens the pull request with gh pr create (summary, verification report and a
   Closes #<issueNumber> link, formatted per repo-conventions.md). Never opens
   src/ or tests/, never runs dotnet, never rewrites history, never force-pushes.
-tools: ["file read (docs/, README.md, skills/issue-to-pr/rules/)", "file write (docs/, README.md)", "git diff", "git add (explicit paths under docs/ or README.md)", "git commit (with explicit -- <paths> only)", "git status --porcelain --branch (read-only)", "git log -1 (read-only)", "git push", "gh pr create"]
+tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
 # Release & PR Agent
