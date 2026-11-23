@@ -11,9 +11,9 @@ Definitions of all metrics are in
 | Approach | B (interactive Copilot) |
 | Issue | S (synthetic issue, overdue todos query), https://github.com/UAI-VUT-Brno/0VP-26-27Z-StudentsGroup-Team-4/issues/65 (#65) |
 | Starting commit | `8278659e150346e070c48e1a99d10becf4ca1d0c` (merge base of the branch with `origin/main`) |
-| Tool and model | VS Code 1.146.0 (commit `69047191fc42`, Windows x64), GitHub Copilot v0.74.0 (`@github/copilot` 1.0.108-0), model `copilot fusion - standard`, Agent mode |
+| Tool and model | VS Code 1.146.0 (commit `69047191fc42`, Windows x64), GitHub Copilot v0.74.0 (`@github/copilot` 1.0.108-0), model setting `copilot fusion - standard`, Agent mode; the underlying model used was Claude Sonnet 5.5 (confirmed by the operator) |
 | Operator | Alexandr Hemala |
-| Deviations from the methodology | Commits were made manually by the operator after the run, not by Copilot. Their subjects were reworded afterwards (they first contained the placeholder `#<n>` instead of the issue number); the content was not changed. |
+| Deviations from the methodology | Commits were made manually by the operator after the run, not by Copilot. Their subjects were reworded afterwards (they first contained the placeholder `#<n>` instead of the issue number); the content was not changed. Between the passing verification and the PR the operator asked a separate AI chat assistant (Claude) which git commands to use for the commits and the PR; it was not used for the implementation. |
 
 ## M1 - Total Time to PR
 
@@ -67,7 +67,7 @@ final state: build exit code 0, test exit code 0, 338 tests total, 338 passed,
 
 ## M5 - C# Code Quality and Style
 
-M5a (from `metrics.json`, collected on commit `14bc71b`):
+M5a (from `metrics.json`, collected on commit `9641d29`):
 
 | Field | Value |
 |-------|-------|
