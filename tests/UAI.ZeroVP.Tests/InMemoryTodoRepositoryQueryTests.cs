@@ -56,6 +56,41 @@ public class InMemoryTodoRepositoryQueryTests
     }
 
     [Fact]
+    public async Task GetOverdueAsync_FiltersByAsOfCompletionAndUser_ThenSortsByDueDateAndPriority()
+    {
+        var repository = CreateEmptyRepository();
+        var asOfUtc = Created.AddDays(10);
+        var laterDue = CreateItem("Later high", TodoPriority.High);
+        laterDue.UserId = "anna";
+        laterDue.DueAtUtc = asOfUtc.AddDays(-1);
+        var earlierLow = CreateItem("Earlier low", TodoPriority.Low);
+        earlierLow.UserId = "ANNA";
+        earlierLow.DueAtUtc = asOfUtc.AddDays(-2);
+        var earlierHigh = CreateItem("Earlier high", TodoPriority.High);
+        earlierHigh.UserId = "anna";
+        earlierHigh.DueAtUtc = asOfUtc.AddDays(-2);
+        var dueAtAsOf = CreateItem("Due now");
+        dueAtAsOf.UserId = "anna";
+        dueAtAsOf.DueAtUtc = asOfUtc;
+        var completed = CreateItem("Completed", isCompleted: true);
+        completed.UserId = "anna";
+        completed.DueAtUtc = asOfUtc.AddDays(-3);
+        var anotherUser = CreateItem("Other user");
+        anotherUser.UserId = "petr";
+        anotherUser.DueAtUtc = asOfUtc.AddDays(-4);
+        var noDueDate = CreateItem("No due date");
+        noDueDate.UserId = "anna";
+
+        await repository.AddRangeAsync([laterDue, earlierLow, earlierHigh, dueAtAsOf, completed, anotherUser, noDueDate]);
+
+        var overdue = await repository.GetOverdueAsync(asOfUtc, "anna");
+
+        Assert.Equal(
+            new[] { earlierHigh.Id, earlierLow.Id, laterDue.Id },
+            overdue.Select(item => item.Id));
+    }
+
+    [Fact]
     public async Task GetByIdAsync_ReturnsCopy_ChangingItDoesNotAffectStoredTask()
     {
         var repository = CreateEmptyRepository();

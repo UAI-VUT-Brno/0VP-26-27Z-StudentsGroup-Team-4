@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using UAI.ZeroVP.Data.Entities;
 using UAI.ZeroVP.Data.InMemory;
 using UAI.ZeroVP.Data.Persistence;
+using UAI.ZeroVP.DTO;
 using UAI.ZeroVP.Tests.Logging;
 
 namespace UAI.ZeroVP.Tests;
@@ -107,6 +108,37 @@ public sealed class SharedJsonFileTodoRepositoryTests : IDisposable
         Assert.Equal(2, (await repository.GetAllAsync(userId: "anna")).Count);
         Assert.Single(await repository.GetAllAsync(isCompleted: true, userId: "anna"));
         Assert.Equal(2, (await repository.GetAllAsync(isCompleted: false)).Count);
+    }
+
+    [Fact]
+    public async Task GetOverdue_FiltersByAsOfCompletionAndUser_ThenSortsByDueDateAndPriority()
+    {
+        var repository = Create();
+        var asOfUtc = new DateTimeOffset(2026, 1, 25, 12, 0, 0, TimeSpan.Zero);
+        var laterHigh = NewItem("Later high", "anna");
+        laterHigh.Priority = TodoPriority.High;
+        laterHigh.DueAtUtc = asOfUtc.AddDays(-1);
+        var earlierLow = NewItem("Earlier low", "anna");
+        earlierLow.Priority = TodoPriority.Low;
+        earlierLow.DueAtUtc = asOfUtc.AddDays(-2);
+        var earlierHigh = NewItem("Earlier high", "ANNA");
+        earlierHigh.Priority = TodoPriority.High;
+        earlierHigh.DueAtUtc = asOfUtc.AddDays(-2);
+        var dueAtAsOf = NewItem("Due now", "anna");
+        dueAtAsOf.DueAtUtc = asOfUtc;
+        var completed = NewItem("Completed", "anna", isCompleted: true);
+        completed.DueAtUtc = asOfUtc.AddDays(-3);
+        var otherUser = NewItem("Other user", "petr");
+        otherUser.DueAtUtc = asOfUtc.AddDays(-4);
+        var noDueDate = NewItem("No due date", "anna");
+
+        await repository.AddRangeAsync([laterHigh, earlierLow, earlierHigh, dueAtAsOf, completed, otherUser, noDueDate]);
+
+        var overdue = await repository.GetOverdueAsync(asOfUtc, "anna");
+
+        Assert.Equal(
+            new[] { earlierHigh.Id, earlierLow.Id, laterHigh.Id },
+            overdue.Select(item => item.Id));
     }
 
     [Fact]
