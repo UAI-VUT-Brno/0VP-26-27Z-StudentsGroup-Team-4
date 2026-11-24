@@ -62,6 +62,26 @@ public sealed class InMemoryTodoRepository : ITodoRepository
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<TodoItem>> GetOverdueAsync(
+        DateTimeOffset asOfUtc,
+        string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var utcAsOf = asOfUtc.ToUniversalTime();
+        IReadOnlyList<TodoItem> result = _items.Values
+            .Where(item => !item.IsCompleted && item.DueAtUtc.HasValue && item.DueAtUtc.Value < utcAsOf)
+            .Where(item => userId is null || string.Equals(item.UserId, userId, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => item.DueAtUtc)
+            .ThenByDescending(item => item.Priority)
+            .Select(item => item.Clone())
+            .ToList();
+
+        return Task.FromResult(result);
+    }
+
+    /// <inheritdoc />
     public Task<TodoItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

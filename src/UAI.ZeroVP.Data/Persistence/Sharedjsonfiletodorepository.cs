@@ -75,6 +75,27 @@ public sealed class SharedJsonFileTodoRepository : ITodoRepository
             cancellationToken);
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<TodoItem>> GetOverdueAsync(
+        DateTimeOffset asOfUtc,
+        string? userId = null,
+        CancellationToken cancellationToken = default) =>
+        ExecuteAsync<IReadOnlyList<TodoItem>>(
+            items =>
+            {
+                var utcAsOf = asOfUtc.ToUniversalTime();
+                var result = items.Values
+                    .Where(item => !item.IsCompleted && item.DueAtUtc.HasValue && item.DueAtUtc.Value < utcAsOf)
+                    .Where(item => userId is null || string.Equals(item.UserId, userId, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(item => item.DueAtUtc)
+                    .ThenByDescending(item => item.Priority)
+                    .Select(item => item.Clone())
+                    .ToList();
+
+                return (result, false);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
     public Task<TodoItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         ExecuteAsync<TodoItem?>(
             items => (items.TryGetValue(id, out var item) ? item.Clone() : null, false),

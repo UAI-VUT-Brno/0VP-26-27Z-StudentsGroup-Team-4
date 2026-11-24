@@ -18,6 +18,14 @@ namespace UAI.ZeroVP.API.Controllers;
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
 public sealed class TodosController : ControllerBase
 {
+    private static readonly string[] AsOfUtcFormats =
+    [
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'",
+        "yyyy-MM-dd'T'HH:mm:sszzz",
+        "yyyy-MM-dd'T'HH:mm:ss.FFFFFFFzzz"
+    ];
+
     private readonly ITodoRepository _repository;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<TodosController> _logger;
@@ -51,6 +59,47 @@ public sealed class TodosController : ControllerBase
             : userId;
 
         var items = await _repository.GetAllAsync(isCompleted, userIdFilter, cancellationToken);
+
+        return Ok(items.Select(item => item.ToDto()).ToList());
+    }
+
+    /// <summary>Vrátí nedokončené úkoly, jejichž termín uplynul k zadanému okamžiku.</summary>
+    /// <param name="asOfUtc">Volitelný okamžik ISO 8601 s explicitním časovým pásmem; bez něj se použije aktuální UTC čas.</param>
+    /// <param name="userId">Volitelný identifikátor uživatele.</param>
+    /// <param name="cancellationToken">Token pro zrušení operace.</param>
+    /// <response code="200">Úkoly seřazené vzestupně podle termínu a sestupně podle priority.</response>
+    /// <response code="400"><c>asOfUtc</c> není platný čas ISO 8601 s explicitním časovým pásmem.</response>
+    [HttpGet("overdue")]
+    [ProducesResponseType(typeof(IReadOnlyList<TodoItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<TodoItemDto>>> GetOverdue(
+        [FromQuery] string? asOfUtc,
+        [FromQuery] string? userId,
+        CancellationToken cancellationToken)
+    {
+        var effectiveAsOfUtc = _timeProvider.GetUtcNow();
+        if (asOfUtc is not null)
+        {
+            if (!DateTimeOffset.TryParseExact(
+                    asOfUtc,
+                    AsOfUtcFormats,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal,
+                    out var parsedAsOfUtc))
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid asOfUtc",
+                    detail: "The asOfUtc query parameter must be an ISO 8601 date and time with an explicit UTC designator or offset.");
+            }
+
+            effectiveAsOfUtc = parsedAsOfUtc.ToUniversalTime();
+        }
+
+        var userIdFilter = userId is null && Request?.Query.ContainsKey("userId") == true
+            ? string.Empty
+            : userId;
+        var items = await _repository.GetOverdueAsync(effectiveAsOfUtc, userIdFilter, cancellationToken);
 
         return Ok(items.Select(item => item.ToDto()).ToList());
     }
