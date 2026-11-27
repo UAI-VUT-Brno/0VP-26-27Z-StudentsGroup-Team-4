@@ -56,6 +56,10 @@ public sealed class SharedStorageApiTests : IDisposable
             // instances), independently of appsettings.json.
             builder.RedirectLogsTo(Path.Combine(_temp.FullPath, "logs"));
 
+            // Persistence is off unless the test opts in: the settings below (added later, so they win)
+            // enable the shared file only for the instances that are meant to share data.
+            builder.DisableJsonPersistence();
+
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings));
         });
 

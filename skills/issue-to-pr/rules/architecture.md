@@ -76,8 +76,7 @@ tests/UAI.ZeroVP.Tests/ xUnit tests                         (references API)
   return `Task<...>`.
 - Changing `ITodoRepository` means updating **every** implementation in the same
   change: `InMemory/InMemoryTodoRepository` and
-  `Persistence/Sharedjsonfiletodorepository.cs` (sic - the file name is lowercase
-  after `Shared`; do not rename it unless the issue says so) - plus every caller and
+  `Persistence/SharedJsonFileTodoRepository.cs` - plus every caller and
   test that uses the changed member. A change that compiles in only one
   implementation is incomplete.
 - Registration of new services goes through
